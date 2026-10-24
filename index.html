@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f8f5" />
+    <meta
+      name="description"
+      content="منصة الوحدة التطوعية لإدارة المبادرات والفرق والمتطوعين."
+    />
+    <title>منصة الوحدة التطوعية</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script defer src="firebase-config.js"></script>
+    <script defer src="public.js"></script>
+  </head>
+  <body>
+    <div class="public-site" id="publicSite">
+      <header class="public-header">
+        <a class="brand public-brand" href="#home" aria-label="منصة الوحدة التطوعية، الرئيسية">
+          <img class="brand-logo" src="logo.png" alt="جمعية نبض التطوعية - Nabd Volunteering Association" />
+        </a>
+        <nav class="public-nav" aria-label="روابط الموقع">
+          <a href="#opportunities">المبادرات</a>
+          <a href="#about">عن المنصة</a>
+        </nav>
+        <div class="public-auth-actions">
+          <button class="public-login-button" type="button" data-auth="login">تسجيل الدخول</button>
+        </div>
+      </header>
+
+      <main id="home">
+        <section class="public-hero">
+          <div class="hero-copy">
+            <span class="hero-kicker"><i></i> معًا نصنع أثرًا يبقى</span>
+            <h1>خطوتك الصغيرة،<br /><span>أثرها كبير.</span></h1>
+            <p>اكتشف فرصًا تطوعية قريبة من اهتماماتك، وكن جزءًا من مبادرات تصنع فرقًا حقيقيًا في مجتمعك.</p>
+            <div class="hero-actions">
+              <button class="primary-button" type="button" data-auth="register">ابدأ رحلتك التطوعية <span>←</span></button>
+              <a href="#opportunities" class="hero-secondary-link">استكشف المبادرات <span>↓</span></a>
+            </div>
+            <div class="hero-social-proof"><div class="proof-avatars"><span>م</span><span>ن</span><span>أ</span><span>+</span></div><p><strong>1,284</strong> متطوع يصنعون الأثر معنا</p></div>
+          </div>
+          <div class="hero-art" aria-label="أثر التطوع يبدأ بخطوة">
+            <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+            <div class="hero-plant"><span class="plant-leaf leaf-one"></span><span class="plant-leaf leaf-two"></span><span class="plant-leaf leaf-three"></span><span class="plant-stem"></span><span class="plant-ground"></span></div>
+            <div class="hero-note note-top"><span>✳</span><div><strong>أثرٌ يزهر</strong><small>بكل يدٍ معطاءة</small></div></div>
+            <div class="hero-note note-bottom"><span class="note-heart">♡</span><div><strong>فرصة جديدة</strong><small>بانتظارك اليوم</small></div></div>
+            <span class="art-spark spark-one">✳</span><span class="art-spark spark-two">✦</span>
+          </div>
+        </section>
+
+        <section class="public-highlights" aria-label="أثر منصة الوحدة التطوعية">
+          <div><strong>24</strong><span>مبادرة مجتمعية</span></div>
+          <div><strong>1,284</strong><span>متطوع ومتطوعة</span></div>
+          <div><strong>3,640</strong><span>ساعة عطاء</span></div>
+          <div><strong>8</strong><span>فرق تصنع الأثر</span></div>
+        </section>
+
+        <section class="public-opportunities" id="opportunities">
+          <div class="public-section-heading">
+            <div><span class="section-kicker">فرصتك تبدأ من هنا</span><h2>مبادرات بانتظارك</h2><p>اختر المبادرة الأقرب لك، وسجّل لتكون جزءًا من أثرها.</p></div>
+            <button type="button" class="browse-all-button" id="browseAllButton">عرض جميع المبادرات <span>←</span></button>
+          </div>
+          <div class="public-initiative-grid" id="publicInitiativeGrid">
+            <article class="public-initiative-card" data-category="البيئة" data-initiative-id="seed_garden">
+              <div class="initiative-card-cover cover-green"><span class="cover-symbol">✳</span><span class="cover-tag">البيئة</span><span class="cover-number">01</span></div>
+              <div class="public-card-content"><div class="card-meta"><span>28 أكتوبر 2026</span><span class="available-status"><i></i> التسجيل مفتوح</span></div><h3>حديقة حيّنا أجمل</h3><p>ازرع البهجة في حينا، وساهم معنا في جعل المساحات الخضراء أجمل للجميع.</p><div class="card-details"><span>⌖ الرياض، حي المروج</span><span>◷ 4 ساعات</span></div><button class="initiative-join-button" type="button" data-auth="login">سجّل للمشاركة <span>←</span></button></div>
+            </article>
+            <article class="public-initiative-card" data-category="رعاية اجتماعية" data-initiative-id="seed_companions">
+              <div class="initiative-card-cover cover-blue"><span class="cover-symbol">♡</span><span class="cover-tag">رعاية اجتماعية</span><span class="cover-number">02</span></div>
+              <div class="public-card-content"><div class="card-meta"><span>30 أكتوبر 2026</span><span class="available-status"><i></i> التسجيل مفتوح</span></div><h3>رفقة كبارنا</h3><p>وقتٌ طيب ورفقة جميلة؛ شارك في إسعاد كبار السن في يوم مليء بالأنشطة.</p><div class="card-details"><span>⌖ مركز الوفاء الاجتماعي</span><span>◷ 3 ساعات</span></div><button class="initiative-join-button" type="button" data-auth="login">سجّل للمشاركة <span>←</span></button></div>
+            </article>
+            <article class="public-initiative-card" data-category="الصحة والرياضة" data-initiative-id="seed_health">
+              <div class="initiative-card-cover cover-orange"><span class="cover-symbol">✦</span><span class="cover-tag">الصحة والرياضة</span><span class="cover-number">03</span></div>
+              <div class="public-card-content"><div class="card-meta"><span>3 نوفمبر 2026</span><span class="available-status"><i></i> التسجيل مفتوح</span></div><h3>خطوة لصحة أفضل</h3><p>انشر الوعي الصحي وشارك في تنظيم فعالية حيوية في أحضان الطبيعة.</p><div class="card-details"><span>⌖ ممشى وادي حنيفة</span><span>◷ 5 ساعات</span></div><button class="initiative-join-button" type="button" data-auth="login">سجّل للمشاركة <span>←</span></button></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="public-join-banner" id="about">
+          <div><span class="section-kicker">مكانك بيننا</span><h2>العطاء أجمل حين نعيشه معًا</h2><p>انضم إلى مجتمع منصة الوحدة التطوعية، واكتشف كيف يمكن لوقتك ومهاراتك أن تصنع فرقًا.</p></div>
+          <button class="primary-button" type="button" data-auth="register">أنشئ حساب متطوع <span>←</span></button>
+          <span class="banner-decoration">✳</span>
+        </section>
+      </main>
+      <p class="firebase-setup-notice" id="firebaseSetupNotice" hidden>المبادرات المعروضة مؤقتة. اربط الموقع بمشروع Firebase الخاص بالجمعية لتفعيل التسجيل وحفظ البيانات.</p>
+      <footer class="public-footer"><a class="brand footer-brand" href="#home"><img class="brand-logo" src="logo.png" alt="جمعية نبض التطوعية - Nabd Volunteering Association" /></a><span>© 2026 منصة الوحدة التطوعية</span></footer>
+    </div>
+
+    <main class="auth-screen" id="authScreen" hidden>
+      <section class="auth-card" aria-labelledby="authTitle">
+        <a class="brand auth-brand" href="#" aria-label="منصة الوحدة التطوعية، الرئيسية">
+          <img class="brand-logo" src="logo.png" alt="جمعية نبض التطوعية - Nabd Volunteering Association" />
+        </a>
+        <span class="auth-kicker">مجتمع يصنع الأثر</span>
+        <h1 id="authTitle">أهلًا بك في منصة الوحدة التطوعية</h1>
+        <p class="auth-subtitle">سجّل دخولك لمتابعة فرصك ومشاركاتك التطوعية.</p>
+        <a class="auth-home-link" id="authHomeButton" href="#home">← العودة للمبادرات</a>
+        <form id="loginForm" class="auth-form">
+          <label class="field-label" for="loginEmail">البريد الإلكتروني</label>
+          <input id="loginEmail" class="dialog-input" type="email" autocomplete="email" placeholder="name@example.com" required />
+          <label class="field-label" for="loginPassword">كلمة المرور</label>
+          <input id="loginPassword" class="dialog-input" type="password" autocomplete="current-password" placeholder="أدخل كلمة المرور" required />
+          <button class="primary-button auth-submit" type="submit">تسجيل الدخول</button>
+          <button class="signup-below-login" type="button" id="registerTab">تسجيل متطوع جديد</button>
+        </form>
+        <form id="registerForm" class="auth-form" hidden>
+          <label class="field-label" for="registerName">الاسم الكامل</label>
+          <input id="registerName" class="dialog-input" autocomplete="name" placeholder="اكتب اسمك الكامل" required />
+          <label class="field-label" for="registerEmail">البريد الإلكتروني</label>
+          <input id="registerEmail" class="dialog-input" type="email" autocomplete="email" placeholder="name@example.com" required />
+          <label class="field-label" for="registerPassword">كلمة المرور</label>
+          <input id="registerPassword" class="dialog-input" type="password" autocomplete="new-password" minlength="6" placeholder="6 أحرف على الأقل" required />
+          <p class="role-note"><span>✓</span> سيُنشأ حسابك بصلاحية <strong>متطوع</strong>. لا يمكن اختيار صلاحية مسؤول عند التسجيل.</p>
+          <button class="primary-button auth-submit" type="submit">إنشاء حساب متطوع</button>
+          <button class="auth-home-link register-back-login" type="button" id="loginTab">لديك حساب؟ تسجيل الدخول</button>
+        </form>
+        <p class="demo-notice">حسابات المتطوعين فقط يمكن إنشاؤها من هذه الصفحة.</p>
+      </section>
+    </main>
+    <div class="app-shell" id="appShell" hidden>
+      <aside class="sidebar" id="sidebar">
+        <a class="brand" href="#" aria-label="منصة الوحدة التطوعية، الصفحة الرئيسية">
+          <img class="brand-logo" src="logo.png" alt="جمعية نبض التطوعية - Nabd Volunteering Association" />
+        </a>
+
+        <div class="workspace-label">مساحة العمل</div>
+        <nav class="main-nav" aria-label="القائمة الرئيسية">
+          <button class="nav-item active" data-page="dashboard">
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg></span>
+            <span>الرئيسية</span>
+          </button>
+          <button class="nav-item" data-page="initiatives">
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3 3.5 7.5 12 12l8.5-4.5L12 3Z"/><path d="m3.5 12 8.5 4.5 8.5-4.5M3.5 16.5 12 21l8.5-4.5"/></svg></span>
+            <span>المبادرات</span><span class="nav-count">8</span>
+          </button>
+          <button class="nav-item" data-page="teams">
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6m3-3h-6"/></svg></span>
+            <span>الفرق التطوعية</span>
+          </button>
+          <button class="nav-item admin-only" data-page="volunteers">
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM16 11a4 4 0 1 0 0-8M18 14.5a4 4 0 0 1 4 4V20"/></svg></span>
+            <span>المتطوعون</span>
+          </button>
+          <button class="nav-item admin-only" data-page="users">
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6m3-3h-6"/></svg></span>
+            <span>إدارة الحسابات</span>
+          </button>
+          <div class="nav-divider"></div>
+          <div class="workspace-label">الخدمات</div>
+          <button class="nav-item admin-only" data-page="requests">
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg></span>
+            <span>الطلبات</span><span class="nav-count alert-count">5</span>
+          </button>
+          <button class="nav-item" data-page="certificates">
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="m8.2 13-1.2 9 5-3 5 3-1.2-9"/></svg></span>
+            <span>الشهادات</span>
+          </button>
+          <button class="nav-item admin-only" data-page="letters">
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+            <span>الخطابات</span>
+          </button>
+          <button class="nav-item admin-only" data-page="reports">
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3"/></svg></span>
+            <span>التقارير والإحصائيات</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="help-card">
+            <span class="help-spark">✳</span>
+            <strong>نحن هنا لمساعدتك</strong>
+            <p>تحتاج مساعدة في استخدام المنصة؟</p>
+            <button type="button" id="helpButton">تواصل مع الدعم <span>←</span></button>
+          </div>
+          <button class="profile-card" id="profileButton" type="button">
+            <span class="avatar avatar-admin">م</span>
+            <span class="profile-copy"><strong id="profileName">مها العتيبي</strong><small id="profileRole">مديرة الوحدة التطوعية</small></span>
+            <span class="profile-more">•••</span>
+          </button>
+        </div>
+      </aside>
+      <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="إغلاق القائمة"></button>
+
+      <main class="main-area">
+        <header class="topbar">
+          <button class="mobile-menu icon-button" id="menuButton" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="breadcrumb"><span>مساحة العمل</span><span class="crumb-separator">/</span><strong id="breadcrumbTitle">الرئيسية</strong></div>
+          <div class="topbar-actions">
+            <div class="date-chip"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg><span id="todayDate"></span></div>
+            <button class="icon-button notification-button" id="notificationButton" aria-label="الإشعارات">
+              <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><i></i>
+            </button>
+            <button class="logout-button" id="logoutButton" type="button">تسجيل الخروج</button>
+            <span class="avatar avatar-admin top-avatar">م</span>
+          </div>
+        </header>
+
+        <div class="page-content">
+          <section class="welcome-row">
+            <div>
+              <div class="eyebrow"><span class="eyebrow-dot"></span> لوحة إدارة الوحدة</div>
+              <h1 id="pageTitle">صباح الخير، مها <span class="wave">✦</span></h1>
+              <p class="welcome-subtitle" id="pageSubtitle">إليك ملخص ما يحدث في منصة الوحدة التطوعية اليوم.</p>
+            </div>
+            <button class="primary-button" id="newInitiativeButton">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              مبادرة جديدة
+            </button>
+          </section>
+
+          <section class="panel account-management admin-only" id="userManagement" hidden>
+            <div class="panel-heading">
+              <div><h2>إدارة الحسابات والصلاحيات</h2><p>كل حساب جديد يبدأ كمتطوع. راجع الحسابات وحدد من يستحق صلاحية إدارية.</p></div>
+              <span class="permission-badge">إدارة المسؤول</span>
+            </div>
+            <div class="permission-warning">ترقية الحساب تمنح صلاحيات إدارية. تأكد من هوية المستخدم وصلاحيته قبل اعتماد التغيير.</div>
+            <div class="table-wrap user-table-wrap">
+              <table class="users-table">
+                <thead><tr><th>المستخدم</th><th>البريد الإلكتروني</th><th>الدور الحالي</th><th>الإجراء</th></tr></thead>
+                <tbody id="userRows"></tbody>
+              </table>
+              <div class="empty-state" id="usersEmptyState" hidden>لا توجد حسابات حتى الآن. تظهر هنا حسابات المتطوعين المسجلة في هذه الجلسة.</div>
+            </div>
+          </section>
+
+          <section class="volunteer-home" id="volunteerHome" hidden>
+            <div class="volunteer-welcome">
+              <span class="volunteer-welcome-icon">✳</span>
+              <div><span>فرصتك تصنع فرقًا</span><h2>ابدأ أثرًا جديدًا اليوم</h2><p>اختر مبادرة تناسب وقتك واهتماماتك، وتابع طلبات مشاركتك من حسابك.</p></div>
+            </div>
+            <div class="volunteer-summary">
+              <article class="volunteer-summary-card"><span>ساعاتي التطوعية</span><strong>0 <small>ساعة</small></strong></article>
+              <article class="volunteer-summary-card"><span>مشاركاتي القادمة</span><strong id="myParticipationCount">0</strong></article>
+              <article class="volunteer-summary-card"><span>شهاداتي</span><strong>0 <small>شهادة</small></strong></article>
+            </div>
+            <section class="panel volunteer-opportunities">
+              <div class="panel-heading"><div><h2>فرص تطوعية متاحة</h2><p>تصفح الفرص وأرسل طلب المشاركة.</p></div></div>
+              <div class="opportunity-list">
+                <article class="opportunity-card"><span class="opportunity-icon green-icon">✳</span><div><h3>حديقة حيّنا أجمل</h3><p>فريق أثر · الرياض · 28 أكتوبر</p></div><button type="button" class="join-button">طلب مشاركة</button></article>
+                <article class="opportunity-card"><span class="opportunity-icon blue-icon">♡</span><div><h3>رفقة كبارنا</h3><p>فريق نبادر · مركز الوفاء · 30 أكتوبر</p></div><button type="button" class="join-button">طلب مشاركة</button></article>
+                <article class="opportunity-card"><span class="opportunity-icon orange-icon">✦</span><div><h3>خطوة لصحة أفضل</h3><p>فريق خطوة · وادي حنيفة · 3 نوفمبر</p></div><button type="button" class="join-button">طلب مشاركة</button></article>
+              </div>
+            </section>
+          </section>
+
+          <section class="stats-grid" aria-label="ملخص المنصة">
+            <article class="stat-card">
+              <div class="stat-top"><span class="stat-icon mint"><svg viewBox="0 0 24 24"><path d="M12 3 3.5 7.5 12 12l8.5-4.5L12 3Z"/><path d="m3.5 12 8.5 4.5 8.5-4.5"/></svg></span><span class="trend positive">↗ 12%</span></div>
+              <div class="stat-label">إجمالي المبادرات</div><div class="stat-value">24 <small>مبادرة</small></div><div class="stat-foot">مقارنة بالشهر الماضي</div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span class="stat-icon lilac"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6m3-3h-6"/></svg></span><span class="trend positive">↗ 8%</span></div>
+              <div class="stat-label">المتطوعون النشطون</div><div class="stat-value">1,284 <small>متطوع</small></div><div class="stat-foot">خلال هذا العام</div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span class="stat-icon peach"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="trend neutral">هذا الشهر</span></div>
+              <div class="stat-label">الساعات التطوعية</div><div class="stat-value">3,640 <small>ساعة</small></div><div class="stat-foot">ساعة معتمدة من المشاركات</div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top"><span class="stat-icon yellow"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="pending-dot">تحتاج متابعة</span></div>
+              <div class="stat-label">طلبات قيد المراجعة</div><div class="stat-value">12 <small>طلب</small></div><div class="stat-foot">منها 5 طلبات مبادرات جديدة</div>
+            </article>
+          </section>
+
+          <section class="overview-grid">
+            <article class="panel chart-panel">
+              <div class="panel-heading">
+                <div><h2>نظرة عامة</h2><p>أداء المبادرات التطوعية</p></div>
+                <button class="select-button" id="periodButton" type="button">آخر 7 أيام <span>⌄</span></button>
+              </div>
+              <div class="chart-summary"><strong>1,842</strong><span>مشاركة تطوعية</span><span class="chart-change">↑ 18.2%</span><span class="chart-caption">مقارنة بالأسبوع الماضي</span></div>
+              <div class="chart" role="img" aria-label="رسم بياني للمشاركات التطوعية خلال الأسبوع">
+                <div class="chart-y-labels"><span>500</span><span>375</span><span>250</span><span>125</span><span>0</span></div>
+                <div class="chart-body">
+                  <div class="chart-gridlines"><i></i><i></i><i></i><i></i><i></i></div>
+                  <svg class="chart-svg" viewBox="0 0 650 170" preserveAspectRatio="none" aria-hidden="true">
+                    <defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#2c8b67" stop-opacity=".19"/><stop offset="1" stop-color="#2c8b67" stop-opacity="0"/></linearGradient></defs>
+                    <path d="M0 124 C35 116 42 130 82 103 S140 110 177 83 227 96 265 72 316 84 354 54 403 76 441 58 493 71 530 34 580 51 650 18 L650 170 L0 170Z" fill="url(#chartFill)"/>
+                    <path d="M0 124 C35 116 42 130 82 103 S140 110 177 83 227 96 265 72 316 84 354 54 403 76 441 58 493 71 530 34 580 51 650 18" fill="none" stroke="#2c8b67" stroke-width="3" vector-effect="non-scaling-stroke"/>
+                    <circle cx="530" cy="34" r="5" fill="#fff" stroke="#2c8b67" stroke-width="3" vector-effect="non-scaling-stroke"/>
+                  </svg>
+                  <div class="chart-x-labels"><span>الأحد</span><span>الاثنين</span><span>الثلاثاء</span><span>الأربعاء</span><span>الخميس</span><span>الجمعة</span><span>السبت</span></div>
+                </div>
+              </div>
+              <div class="chart-legend"><span><i class="legend-dot"></i> المشاركات</span><span><i class="legend-dot pale"></i> الساعات التطوعية</span></div>
+            </article>
+
+            <article class="panel side-panel">
+              <div class="panel-heading"><div><h2>المبادرات القادمة</h2><p>لا تفوّت الاستعداد لها</p></div><button class="text-link" data-page="initiatives">عرض الكل <span>←</span></button></div>
+              <div class="upcoming-list">
+                <div class="upcoming-item"><div class="event-date"><strong>28</strong><span>أكتوبر</span></div><div class="event-info"><strong>حديقة حيّنا أجمل</strong><span><i class="mini-location"></i> حديقة المروج، الرياض</span></div><span class="event-people"><i></i> 24</span></div>
+                <div class="upcoming-item"><div class="event-date date-blue"><strong>30</strong><span>أكتوبر</span></div><div class="event-info"><strong>رفقة كبارنا</strong><span><i class="mini-location"></i> مركز الوفاء الاجتماعي</span></div><span class="event-people"><i></i> 18</span></div>
+                <div class="upcoming-item"><div class="event-date date-orange"><strong>3</strong><span>نوفمبر</span></div><div class="event-info"><strong>خطوة لصحة أفضل</strong><span><i class="mini-location"></i> ممشى وادي حنيفة</span></div><span class="event-people"><i></i> 32</span></div>
+              </div>
+              <button class="calendar-link" id="calendarButton"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg> عرض تقويم المبادرات <span>←</span></button>
+            </article>
+          </section>
+
+          <section class="panel initiatives-panel">
+            <div class="panel-heading initiatives-heading">
+              <div><h2 id="tableTitle">أحدث المبادرات</h2><p id="tableDescription">تابع حالة المبادرات وطلبات الفرق</p></div>
+              <div class="table-actions">
+                <label class="search-box"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" id="searchInput" placeholder="ابحث عن مبادرة..." aria-label="ابحث عن مبادرة" /></label>
+                <button class="filter-button" id="filterButton"><svg viewBox="0 0 24 24"><path d="M4 7h16M7 12h10m-7 5h4"/></svg> تصفية <span class="filter-arrow">⌄</span></button>
+                <button class="more-button" aria-label="خيارات إضافية">•••</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>اسم المبادرة</th><th>الفريق المسؤول</th><th>تاريخ التنفيذ</th><th>المتطوعون</th><th>الحالة</th><th><span class="visually-hidden">إجراءات</span></th></tr></thead>
+                <tbody id="initiativeRows">
+                  <tr data-status="مفتوحة"><td><span class="initiative-name"><span class="table-event-icon green-icon">✳</span><span><strong>حديقة حيّنا أجمل</strong><small>تنمية المجتمع · #NB-024</small></span></span></td><td><span class="team-cell"><span class="tiny-avatar green-avatar">أ</span> فريق أثر</span></td><td>28 أكتوبر 2026</td><td><span class="volunteer-count"><span class="person-icon">♙</span> 24 / 30</span></td><td><span class="status-pill status-open"><i></i> التسجيل مفتوح</span></td><td><button class="row-more" aria-label="خيارات المبادرة">•••</button></td></tr>
+                  <tr data-status="قيد المراجعة"><td><span class="initiative-name"><span class="table-event-icon blue-icon">♡</span><span><strong>رفقة كبارنا</strong><small>رعاية اجتماعية · #NB-023</small></span></span></td><td><span class="team-cell"><span class="tiny-avatar lilac-avatar">ن</span> فريق نبادر</span></td><td>30 أكتوبر 2026</td><td><span class="volunteer-count"><span class="person-icon">♙</span> 18 / 20</span></td><td><span class="status-pill status-review"><i></i> قيد المراجعة</span></td><td><button class="row-more" aria-label="خيارات المبادرة">•••</button></td></tr>
+                  <tr data-status="مكتملة"><td><span class="initiative-name"><span class="table-event-icon orange-icon">✦</span><span><strong>خطوة لصحة أفضل</strong><small>الصحة والرياضة · #NB-022</small></span></span></td><td><span class="team-cell"><span class="tiny-avatar orange-avatar">خ</span> فريق خطوة</span></td><td>3 نوفمبر 2026</td><td><span class="volunteer-count"><span class="person-icon">♙</span> 32 / 32</span></td><td><span class="status-pill status-full"><i></i> اكتمل العدد</span></td><td><button class="row-more" aria-label="خيارات المبادرة">•••</button></td></tr>
+                  <tr data-status="مفتوحة"><td><span class="initiative-name"><span class="table-event-icon purple-icon">☼</span><span><strong>كتاب لكل طفل</strong><small>التعليم والثقافة · #NB-021</small></span></span></td><td><span class="team-cell"><span class="tiny-avatar pink-avatar">ق</span> فريق قارئ</span></td><td>7 نوفمبر 2026</td><td><span class="volunteer-count"><span class="person-icon">♙</span> 12 / 25</span></td><td><span class="status-pill status-open"><i></i> التسجيل مفتوح</span></td><td><button class="row-more" aria-label="خيارات المبادرة">•••</button></td></tr>
+                </tbody>
+              </table>
+              <div class="empty-state" id="emptyState" hidden>لا توجد مبادرات تطابق بحثك.</div>
+            </div>
+            <div class="table-footer"><span>عرض <strong id="visibleCount">4</strong> من أصل <span id="totalCount">24</span> مبادرة</span><div class="pagination"><button disabled aria-label="السابق">‹</button><button class="page-current">1</button><button>2</button><button>3</button><span>...</span><button>6</button><button aria-label="التالي">›</button></div></div>
+          </section>
+          <footer class="page-footer"><span>© 2026 منصة الوحدة التطوعية</span><span>صُنع بكل <b>♥</b> لأثرٍ يدوم</span></footer>
+        </div>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <dialog class="action-dialog" id="actionDialog">
+      <form method="dialog" class="dialog-content">
+        <button class="dialog-close" aria-label="إغلاق">×</button>
+        <span class="dialog-icon">✳</span>
+        <h2 id="dialogTitle">إنشاء مبادرة جديدة</h2>
+        <p id="dialogDescription">ابدأ بتقديم مبادرتك، وسيقوم فريق الوحدة بمراجعتها قبل نشرها.</p>
+        <label class="field-label" for="initiativeName">اسم المبادرة</label>
+        <input id="initiativeName" class="dialog-input" placeholder="مثال: مبادرة أثر جميل" />
+        <label class="field-label" for="initiativeTeam">الفريق المسؤول</label>
+        <select id="initiativeTeam" class="dialog-input"><option>اختر الفريق</option><option>فريق أثر</option><option>فريق نبادر</option><option>فريق خطوة</option></select>
+        <div class="dialog-actions"><button class="secondary-button" value="cancel">إلغاء</button><button class="primary-button" id="submitInitiative" value="default">حفظ كمسودة</button></div>
+      </form>
+    </dialog>
+  </body>
+</html>
