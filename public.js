@@ -59,6 +59,15 @@ document.querySelectorAll("[data-auth]").forEach((button) => {
       try {
         await auth.signOut();
         currentUser = null;
+        document.getElementById("myTeamJoinRequests").replaceChildren();
+        document.getElementById("myTeamJoinRequestsEmpty").textContent = "سجّل الدخول لمتابعة طلبات انضمامك.";
+        document.getElementById("myTeamJoinRequestsEmpty").hidden = false;
+        document.getElementById("myNotifications").replaceChildren();
+        document.getElementById("myNotificationsEmpty").textContent = "سجّل الدخول لعرض تنبيهاتك.";
+        document.getElementById("myNotificationsEmpty").hidden = false;
+        document.getElementById("myCertificates").replaceChildren();
+        document.getElementById("myCertificatesEmpty").textContent = "سجّل الدخول لعرض شهاداتك.";
+        document.getElementById("myCertificatesEmpty").hidden = false;
         button.textContent = "تسجيل الدخول";
         showToast("تم تسجيل الخروج.");
       } catch (error) {
@@ -84,7 +93,150 @@ document.getElementById("loginTab").addEventListener("click", () => openAuth("lo
 function setSignedInHeader(user, name) {
   currentUser = user;
   document.querySelector(".public-login-button").textContent = name ? `أهلًا، ${name}` : "حسابي";
+  loadMyRecords(user).catch((error) => {
+    showToast(`تعذر تحميل سجلات حسابك: ${firebaseError(error)}`);
+  });
 }
+
+async function loadMyRecords(user) {
+  await Promise.all([
+    loadMyTeamJoinRequests(user),
+    loadMyNotifications(user),
+    loadMyCertificates(user)
+  ]);
+}
+
+async function loadMyTeamJoinRequests(user) {
+  if (!firebaseReady || !user) return;
+  const rows = document.getElementById("myTeamJoinRequests");
+  const empty = document.getElementById("myTeamJoinRequestsEmpty");
+  const snapshot = await db.collection("teamJoinRequests")
+    .where("volunteerUid", "==", user.uid)
+    .get();
+  const requests = snapshot.docs.sort((a, b) =>
+    (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0)
+  );
+  rows.replaceChildren();
+  empty.hidden = requests.length > 0;
+  empty.textContent = "لا توجد طلبات انضمام حتى الآن.";
+  requests.forEach((item) => {
+    const request = item.data();
+    const row = document.createElement("tr");
+    const teamId = document.createElement("td");
+    teamId.textContent = request.teamId;
+    const status = document.createElement("td");
+    status.textContent = request.status === "pending"
+      ? "قيد المراجعة"
+      : request.status === "accepted" ? "مقبول" : "مرفوض";
+    const date = document.createElement("td");
+    date.textContent = request.createdAt?.toDate?.().toLocaleDateString("ar-SA") || "—";
+    row.append(teamId, status, date);
+    rows.append(row);
+  });
+}
+
+async function loadMyNotifications(user) {
+  const rows = document.getElementById("myNotifications");
+  const empty = document.getElementById("myNotificationsEmpty");
+  const snapshot = await db.collection("notifications")
+    .where("recipientUid", "==", user.uid)
+    .get();
+  const notifications = snapshot.docs.sort((a, b) =>
+    (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0)
+  );
+  rows.replaceChildren();
+  empty.hidden = notifications.length > 0;
+  empty.textContent = "لا توجد تنبيهات أو تحذيرات.";
+  notifications.forEach((item) => {
+    const notification = item.data();
+    const row = document.createElement("tr");
+    const type = document.createElement("td");
+    type.textContent = notification.type === "warning" ? "تحذير" : "تنبيه";
+    const message = document.createElement("td");
+    message.textContent = notification.message;
+    const date = document.createElement("td");
+    date.textContent = notification.createdAt?.toDate?.().toLocaleDateString("ar-SA") || "—";
+    row.append(type, message, date);
+    rows.append(row);
+  });
+}
+
+async function loadMyCertificates(user) {
+  const rows = document.getElementById("myCertificates");
+  const empty = document.getElementById("myCertificatesEmpty");
+  const snapshot = await db.collection("certificates")
+    .where("volunteerUid", "==", user.uid)
+    .get();
+  const certificates = snapshot.docs.sort((a, b) =>
+    (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0)
+  );
+  rows.replaceChildren();
+  empty.hidden = certificates.length > 0;
+  empty.textContent = "لا توجد شهادات مسجلة.";
+  certificates.forEach((item) => {
+    const certificate = item.data();
+    const row = document.createElement("tr");
+    const initiative = document.createElement("td");
+    initiative.textContent = certificate.initiativeId;
+    const hours = document.createElement("td");
+    hours.textContent = String(certificate.hours || 0);
+    const linkCell = document.createElement("td");
+    if (typeof certificate.certificateUrl === "string" && /^https:\/\//i.test(certificate.certificateUrl)) {
+      const link = document.createElement("a");
+      link.href = certificate.certificateUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = certificate.certificateNumber || "عرض الشهادة";
+      linkCell.append(link);
+    } else {
+      linkCell.textContent = certificate.certificateNumber || "—";
+    }
+    row.append(initiative, hours, linkCell);
+    rows.append(row);
+  });
+}
+
+document.getElementById("teamJoinForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!requireFirebase()) return;
+  if (!currentUser) {
+    showToast("سجّل الدخول بحساب المتطوع ثم أرسل طلب الانضمام.");
+    openAuth("login");
+    return;
+  }
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type=submit]");
+  const teamId = document.getElementById("teamJoinId").value.trim();
+  button.disabled = true;
+  try {
+    const profile = await db.collection("volunteers").doc(currentUser.uid).get();
+    if (!profile.exists || profile.data().role !== "volunteer") {
+      showToast("طلب الانضمام متاح لحسابات المتطوعين فقط.");
+      return;
+    }
+    const pending = await db.collection("teamJoinRequests")
+      .where("volunteerUid", "==", currentUser.uid)
+      .get();
+    if (pending.docs.some((request) => request.data().teamId === teamId && request.data().status === "pending")) {
+      showToast("لديك طلب قيد المراجعة لهذا الفريق.");
+      return;
+    }
+    await db.collection("teamJoinRequests").add({
+      teamId,
+      volunteerUid: currentUser.uid,
+      volunteerName: profile.data().displayName,
+      status: "pending",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    form.reset();
+    showToast("تم إرسال طلب الانضمام لقائد الفريق.");
+    await loadMyRecords(currentUser);
+  } catch (error) {
+    showToast(firebaseError(error));
+  } finally {
+    button.disabled = false;
+  }
+});
 
 function initiativeName(id) {
   const card = [...document.querySelectorAll("[data-initiative-id]")].find((item) => item.dataset.initiativeId === id);

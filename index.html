@@ -86,6 +86,25 @@
           </div>
         </section>
 
+        <section class="public-team-join panel" id="teamJoinSection" aria-labelledby="teamJoinHeading">
+          <div class="public-section-heading">
+            <div><span class="section-kicker">الفرق التطوعية</span><h2 id="teamJoinHeading">اطلب الانضمام إلى فريق</h2><p>أدخل معرّف الفريق الذي زوّدك به قائده. لا تعرض المنصة بيانات فرق أو أعضاء غير فريقك.</p></div>
+          </div>
+          <form id="teamJoinForm" class="team-join-form">
+            <label class="field-label" for="teamJoinId">معرّف الفريق</label>
+            <input class="dialog-input" id="teamJoinId" required maxlength="128" />
+            <button class="primary-button" type="submit">إرسال طلب الانضمام</button>
+          </form>
+          <div class="admin-table-wrap">
+            <table class="admin-table"><thead><tr><th>معرّف الفريق</th><th>الحالة</th><th>تاريخ الطلب</th></tr></thead><tbody id="myTeamJoinRequests"></tbody></table>
+            <p class="admin-empty" id="myTeamJoinRequestsEmpty">سجّل الدخول لمتابعة طلبات انضمامك.</p>
+          </div>
+          <div class="member-records-grid">
+            <div><h3>التنبيهات والتحذيرات</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>النوع</th><th>النص</th><th>التاريخ</th></tr></thead><tbody id="myNotifications"></tbody></table><p class="admin-empty" id="myNotificationsEmpty">سجّل الدخول لعرض تنبيهاتك.</p></div></div>
+            <div><h3>شهاداتك وساعاتك</h3><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>المبادرة</th><th>الساعات</th><th>الشهادة</th></tr></thead><tbody id="myCertificates"></tbody></table><p class="admin-empty" id="myCertificatesEmpty">سجّل الدخول لعرض شهاداتك.</p></div></div>
+          </div>
+        </section>
+
         <section class="public-join-banner" id="about">
           <div><span class="section-kicker">مكانك بيننا</span><h2>العطاء أجمل حين نعيشه معًا</h2><p>انضم إلى مجتمع منصة الوحدة التطوعية، واكتشف كيف يمكن لوقتك ومهاراتك أن تصنع فرقًا.</p></div>
           <button class="primary-button" type="button" data-auth="register">أنشئ حساب متطوع <span>←</span></button>
