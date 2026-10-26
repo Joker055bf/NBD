@@ -3,12 +3,14 @@ const firebaseReady = typeof firebase !== "undefined"
   && Object.values(firebaseConfig).every((value) => typeof value === "string" && value.trim());
 const auth = firebaseReady ? firebase.auth() : null;
 const db = firebaseReady ? firebase.firestore() : null;
+const functions = firebaseReady ? firebase.app().functions("us-central1") : null;
 const publicSite = document.getElementById("publicSite");
 const authScreen = document.getElementById("authScreen");
 const authTitle = document.getElementById("authTitle");
 const authSubtitle = document.querySelector(".auth-subtitle");
 const toast = document.getElementById("toast");
 let currentUser = null;
+let currentProfile = null;
 let pendingInitiative = null;
 let toastTimer;
 
@@ -23,12 +25,18 @@ function firebaseError(error) {
   const messages = {
     "auth/email-already-in-use": "هذا البريد مسجل مسبقًا. جرّب تسجيل الدخول.",
     "auth/invalid-email": "تحقق من صيغة البريد الإلكتروني.",
-    "auth/invalid-credential": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    "auth/invalid-credential": "اسم المستخدم أو كلمة المرور غير صحيحة.",
+    "auth/wrong-password": "كلمة المرور الحالية غير صحيحة.",
+    "auth/requires-recent-login": "سجّل الدخول مجددًا ثم حاول تغيير بيانات الدخول.",
+    "auth/credential-already-in-use": "هذا البريد مستخدم في حساب آخر.",
     "auth/weak-password": "اختر كلمة مرور أقوى (6 أحرف على الأقل).",
     "auth/too-many-requests": "محاولات كثيرة. انتظر قليلًا ثم حاول مجددًا.",
     "auth/network-request-failed": "تعذر الاتصال. تحقق من اتصال الإنترنت.",
     "permission-denied": "لا تملك صلاحية تنفيذ هذا الإجراء.",
-    "firestore/permission-denied": "لا تملك صلاحية تنفيذ هذا الإجراء."
+    "firestore/permission-denied": "لا تملك صلاحية تنفيذ هذا الإجراء.",
+    "functions/already-exists": "اسم المستخدم أو البريد الإلكتروني مستخدم مسبقًا.",
+    "functions/unauthenticated": "اسم المستخدم أو كلمة المرور غير صحيحة.",
+    "functions/invalid-argument": "تحقق من البيانات المدخلة."
   };
   return messages[error.code] || error.message || "حدث خطأ غير متوقع. حاول مرة أخرى.";
 }
@@ -37,6 +45,46 @@ function requireFirebase() {
   if (firebaseReady) return true;
   showToast("Firebase غير مضبوط. أضف إعدادات مشروعك إلى firebase-config.js أولًا.");
   return false;
+}
+
+function openVolunteerSettings() {
+  if (!currentUser || !currentProfile) {
+    showToast("سجّل الدخول أولًا لفتح إعدادات حسابك.");
+    return;
+  }
+  document.getElementById("volunteerProfileName").value = currentProfile.displayName || "";
+  document.getElementById("volunteerProfileEmail").value = currentUser.email || currentProfile.email || "";
+  document.getElementById("volunteerProfileGender").value = currentProfile.gender || "";
+  document.getElementById("volunteerProfileNationality").value = currentProfile.nationality || "";
+  document.getElementById("volunteerUsername").value = currentProfile.username || "";
+  document.getElementById("volunteerNewUsername").value = currentProfile.username || "";
+  document.getElementById("volunteerUsernamePassword").value = "";
+  document.getElementById("volunteerCurrentPassword").value = "";
+  document.getElementById("volunteerNewPassword").value = "";
+  document.getElementById("volunteerSettingsDialog").showModal();
+}
+
+async function signOutVolunteer() {
+  if (!auth) return;
+  try {
+    await auth.signOut();
+    currentUser = null;
+    currentProfile = null;
+    document.querySelector(".public-login-button").textContent = "تسجيل الدخول";
+    document.getElementById("myTeamJoinRequests").replaceChildren();
+    document.getElementById("myTeamJoinRequestsEmpty").textContent = "سجّل الدخول لمتابعة طلبات انضمامك.";
+    document.getElementById("myTeamJoinRequestsEmpty").hidden = false;
+    document.getElementById("myNotifications").replaceChildren();
+    document.getElementById("myNotificationsEmpty").textContent = "سجّل الدخول لعرض تنبيهاتك.";
+    document.getElementById("myNotificationsEmpty").hidden = false;
+    document.getElementById("myCertificates").replaceChildren();
+    document.getElementById("myCertificatesEmpty").textContent = "سجّل الدخول لعرض شهاداتك.";
+    document.getElementById("myCertificatesEmpty").hidden = false;
+    document.getElementById("volunteerSettingsDialog").close();
+    showToast("تم تسجيل الخروج.");
+  } catch (error) {
+    showToast(firebaseError(error));
+  }
 }
 
 function openAuth(mode = "login", initiativeId = null) {
@@ -56,27 +104,19 @@ function openAuth(mode = "login", initiativeId = null) {
 document.querySelectorAll("[data-auth]").forEach((button) => {
   button.addEventListener("click", async () => {
     if (currentUser && button.classList.contains("public-login-button")) {
-      try {
-        await auth.signOut();
-        currentUser = null;
-        document.getElementById("myTeamJoinRequests").replaceChildren();
-        document.getElementById("myTeamJoinRequestsEmpty").textContent = "سجّل الدخول لمتابعة طلبات انضمامك.";
-        document.getElementById("myTeamJoinRequestsEmpty").hidden = false;
-        document.getElementById("myNotifications").replaceChildren();
-        document.getElementById("myNotificationsEmpty").textContent = "سجّل الدخول لعرض تنبيهاتك.";
-        document.getElementById("myNotificationsEmpty").hidden = false;
-        document.getElementById("myCertificates").replaceChildren();
-        document.getElementById("myCertificatesEmpty").textContent = "سجّل الدخول لعرض شهاداتك.";
-        document.getElementById("myCertificatesEmpty").hidden = false;
-        button.textContent = "تسجيل الدخول";
-        showToast("تم تسجيل الخروج.");
-      } catch (error) {
-        showToast(firebaseError(error));
-      }
+      openVolunteerSettings();
       return;
     }
     openAuth(button.dataset.auth);
   });
+});
+
+document.getElementById("closeVolunteerSettings").addEventListener("click", () => {
+  document.getElementById("volunteerSettingsDialog").close();
+});
+document.getElementById("volunteerSettingsLogout").addEventListener("click", signOutVolunteer);
+document.getElementById("volunteerSettingsDialog").addEventListener("click", (event) => {
+  if (event.target === event.currentTarget) event.currentTarget.close();
 });
 
 document.getElementById("authHomeButton").addEventListener("click", (event) => {
@@ -90,9 +130,10 @@ document.getElementById("authHomeButton").addEventListener("click", (event) => {
 document.getElementById("registerTab").addEventListener("click", () => openAuth("register"));
 document.getElementById("loginTab").addEventListener("click", () => openAuth("login"));
 
-function setSignedInHeader(user, name) {
+function setSignedInHeader(user, profile) {
   currentUser = user;
-  document.querySelector(".public-login-button").textContent = name ? `أهلًا، ${name}` : "حسابي";
+  currentProfile = profile;
+  document.querySelector(".public-login-button").textContent = "إعدادات الحساب";
   loadMyRecords(user).catch((error) => {
     showToast(`تعذر تحميل سجلات حسابك: ${firebaseError(error)}`);
   });
@@ -282,19 +323,22 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
   event.preventDefault();
   if (!requireFirebase()) return;
   const name = document.getElementById("registerName").value.trim();
+  const username = document.getElementById("registerUsername").value.trim();
   const email = document.getElementById("registerEmail").value.trim();
   const password = document.getElementById("registerPassword").value;
+  if (name.length < 2 || name.length > 100 || !/^[A-Za-z0-9._-]{3,32}$/.test(username)) {
+    showToast("تحقق من الاسم واسم المستخدم. اسم المستخدم من 3 إلى 32 خانة.");
+    return;
+  }
   try {
-    const credential = await auth.createUserWithEmailAndPassword(email, password);
-    await credential.user.updateProfile({ displayName: name });
-    await db.collection("volunteers").doc(credential.user.uid).set({
-      uid: credential.user.uid,
+    const result = await functions.httpsCallable("completeVolunteerSignup")({
       displayName: name,
+      username,
       email,
-      role: "volunteer",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      password
     });
-    setSignedInHeader(credential.user, name);
+    const credential = await auth.signInWithCustomToken(result.data.customToken);
+    setSignedInHeader(credential.user, { displayName: name, email, username: result.data.username, role: "volunteer" });
     authScreen.hidden = true;
     publicSite.hidden = false;
     showToast("تم إنشاء حساب المتطوع بنجاح.");
@@ -311,17 +355,25 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
 document.getElementById("loginForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!requireFirebase()) return;
-  const email = document.getElementById("loginEmail").value.trim();
+  const username = document.getElementById("loginUsername").value.trim();
   const password = document.getElementById("loginPassword").value;
   try {
-    const credential = await auth.signInWithEmailAndPassword(email, password);
+    const result = await functions.httpsCallable("usernameSignIn")({
+      username,
+      password,
+      apiKey: firebaseConfig.apiKey
+    });
+    const credential = await auth.signInWithCustomToken(result.data.customToken);
     const profile = await db.collection("volunteers").doc(credential.user.uid).get();
     if (!profile.exists) {
+      await auth.signOut();
       showToast("هذا الحساب غير مسجل كمتطوع. تواصل مع إدارة المنصة.");
       return;
     }
-    const displayName = profile.data().displayName || credential.user.displayName || "متطوع";
-    setSignedInHeader(credential.user, displayName);
+    const profileData = profile.data();
+    profileData.displayName = profileData.displayName || credential.user.displayName || "متطوع";
+    currentProfile = profileData;
+    setSignedInHeader(credential.user, profileData);
     authScreen.hidden = true;
     publicSite.hidden = false;
     showToast("تم تسجيل الدخول بنجاح.");
@@ -332,6 +384,99 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
     }
   } catch (error) {
     showToast(firebaseError(error));
+  }
+});
+
+document.getElementById("volunteerProfileForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!requireFirebase() || !currentUser || !currentProfile) return;
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type=submit]");
+  const displayName = document.getElementById("volunteerProfileName").value.trim();
+  const gender = document.getElementById("volunteerProfileGender").value;
+  const nationality = document.getElementById("volunteerProfileNationality").value.trim();
+  if (displayName.length < 2 || displayName.length > 100 || nationality.length > 80) {
+    showToast("تحقق من الاسم والجنسية قبل الحفظ.");
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    await db.collection("volunteers").doc(currentUser.uid).update({
+      displayName,
+      email: currentUser.email,
+      gender: gender || firebase.firestore.FieldValue.delete(),
+      nationality: nationality || firebase.firestore.FieldValue.delete()
+    });
+    currentProfile = { ...currentProfile, displayName, email: currentUser.email, gender, nationality };
+    try {
+      await currentUser.updateProfile({ displayName });
+    } catch (error) {
+      showToast(`تم حفظ بيانات الملف الشخصي، لكن تعذر تحديث اسم العرض في الحساب: ${firebaseError(error)}`);
+      return;
+    }
+    showToast("تم حفظ بياناتك الشخصية.");
+  } catch (error) {
+    showToast(firebaseError(error));
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function reauthenticateVolunteer(password) {
+  const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+  await currentUser.reauthenticateWithCredential(credential);
+}
+
+document.getElementById("volunteerUsernameForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!requireFirebase() || !currentUser || !currentProfile) return;
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type=submit]");
+  const currentPassword = document.getElementById("volunteerUsernamePassword").value;
+  const newUsername = document.getElementById("volunteerNewUsername").value.trim();
+  if (!/^[A-Za-z0-9._-]{3,32}$/.test(newUsername)) {
+    showToast("اسم المستخدم من 3 إلى 32 خانة، ويقبل الأحرف الإنجليزية والأرقام و . و _ و -.");
+    return;
+  }
+
+  button.disabled = true;
+  try {
+    await reauthenticateVolunteer(currentPassword);
+    const result = await functions.httpsCallable("setAccountUsername")({ username: newUsername });
+    currentProfile = { ...currentProfile, username: result.data.username };
+    document.getElementById("volunteerUsername").value = result.data.username;
+    form.reset();
+    document.getElementById("volunteerNewUsername").value = result.data.username;
+    showToast("تم تغيير اسم المستخدم بنجاح.");
+  } catch (error) {
+    showToast(firebaseError(error));
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.getElementById("volunteerPasswordForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!requireFirebase() || !currentUser) return;
+  const form = event.currentTarget;
+  const button = form.querySelector("button[type=submit]");
+  const currentPassword = document.getElementById("volunteerCurrentPassword").value;
+  const newPassword = document.getElementById("volunteerNewPassword").value;
+  if (newPassword.length < 6) {
+    showToast("كلمة المرور الجديدة يجب ألا تقل عن 6 أحرف.");
+    return;
+  }
+  button.disabled = true;
+  try {
+    await reauthenticateVolunteer(currentPassword);
+    await currentUser.updatePassword(newPassword);
+    form.reset();
+    showToast("تم تغيير كلمة المرور بنجاح.");
+  } catch (error) {
+    showToast(firebaseError(error));
+  } finally {
+    button.disabled = false;
   }
 });
 
@@ -352,7 +497,7 @@ function renderPublishedInitiative(initiativeSnapshot, index) {
   const meta = document.createElement("div");
   meta.className = "card-meta";
   const date = document.createElement("span");
-  date.textContent = initiative.date || "يحدد لاحقًا";
+  date.textContent = formatInitiativeDate(initiative.date);
   const status = document.createElement("span");
   status.className = "available-status";
   status.innerHTML = "<i></i> التسجيل مفتوح";
@@ -377,13 +522,26 @@ function renderPublishedInitiative(initiativeSnapshot, index) {
   return article;
 }
 
+function formatInitiativeDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value || "يحدد لاحقًا";
+  }
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("ar-SA-u-nu-latn", {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    }).format(date);
+}
+
 async function loadPublishedInitiatives() {
   if (!firebaseReady) return;
   try {
     const snapshot = await db.collection("initiatives")
       .where("published", "==", true)
       .where("status", "==", "open")
-      .orderBy("date", "asc")
       .get();
     const grid = document.getElementById("publicInitiativeGrid");
     grid.replaceChildren();
@@ -394,10 +552,19 @@ async function loadPublishedInitiatives() {
       grid.append(empty);
       return;
     }
-    snapshot.forEach((initiativeSnapshot, index) => {
+    const initiatives = snapshot.docs.sort((left, right) =>
+      String(left.data().date || "").localeCompare(String(right.data().date || ""))
+    );
+    initiatives.forEach((initiativeSnapshot, index) => {
       grid.append(renderPublishedInitiative(initiativeSnapshot, index));
     });
   } catch (error) {
+    const grid = document.getElementById("publicInitiativeGrid");
+    grid.replaceChildren();
+    const failure = document.createElement("p");
+    failure.className = "public-empty-state";
+    failure.textContent = "تعذر تحميل الفرص حاليًا. حاول تحديث الصفحة بعد قليل.";
+    grid.append(failure);
     showToast(`تعذر تحميل المبادرات من Firebase: ${firebaseError(error)}`);
   }
 }
@@ -407,7 +574,7 @@ if (firebaseReady) {
     if (!user || currentUser?.uid === user.uid) return;
     try {
       const profile = await db.collection("volunteers").doc(user.uid).get();
-      if (profile.exists) setSignedInHeader(user, profile.data().displayName);
+      if (profile.exists) setSignedInHeader(user, profile.data());
     } catch (error) {
       showToast(firebaseError(error));
     }

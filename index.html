@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f7f8f5" />
+    <meta name="theme-color" content="#153e2c" />
     <meta
       name="description"
-      content="منصة الوحدة التطوعية لإدارة المبادرات والفرق والمتطوعين."
+      content="اكتشف الفرص التطوعية المعتمدة، وانضم إلى الفرق والمبادرات التي تصنع أثرًا مستدامًا في مجتمعك."
     />
     <title>منصة الوحدة التطوعية</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,6 +19,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
     <script defer src="firebase-config.js"></script>
     <script defer src="public.js"></script>
   </head>
@@ -29,10 +30,13 @@
           <img class="brand-logo" src="logo.png" alt="جمعية نبض التطوعية - Nabd Volunteering Association" />
         </a>
         <nav class="public-nav" aria-label="روابط الموقع">
-          <a href="#opportunities">المبادرات</a>
+          <a href="#opportunities">الفرص التطوعية</a>
+          <a href="#how-it-works">كيف تبدأ؟</a>
+          <a href="#teamJoinSection">الفرق</a>
           <a href="#about">عن المنصة</a>
         </nav>
         <div class="public-auth-actions">
+          <button class="primary-button public-register-button" type="button" data-auth="register">انضم كمتطوع</button>
           <button class="public-login-button" type="button" data-auth="login">تسجيل الدخول</button>
         </div>
       </header>
@@ -40,14 +44,14 @@
       <main id="home">
         <section class="public-hero">
           <div class="hero-copy">
-            <span class="hero-kicker"><i></i> معًا نصنع أثرًا يبقى</span>
-            <h1>خطوتك الصغيرة،<br /><span>أثرها كبير.</span></h1>
-            <p>اكتشف فرصًا تطوعية قريبة من اهتماماتك، وكن جزءًا من مبادرات تصنع فرقًا حقيقيًا في مجتمعك.</p>
+            <span class="hero-kicker"><i></i> منصة الوحدة التطوعية</span>
+            <h1>وقتك يصنع فرقًا.<br /><span>ابدأ أثرًا يدوم.</span></h1>
+            <p>مكان واحد يجمع الفرص التطوعية والفرق والمبادرات؛ اختر ما يناسبك، وساهم بخبرتك ووقتك في خدمة مجتمعك.</p>
             <div class="hero-actions">
               <button class="primary-button" type="button" data-auth="register">ابدأ رحلتك التطوعية <span>←</span></button>
               <a href="#opportunities" class="hero-secondary-link">استكشف المبادرات <span>↓</span></a>
             </div>
-            <div class="hero-social-proof"><div class="proof-avatars"><span>م</span><span>ن</span><span>أ</span><span>+</span></div><p><strong>1,284</strong> متطوع يصنعون الأثر معنا</p></div>
+            <div class="hero-social-proof"><span class="trust-mark">✓</span><p><strong>تسجيل آمن</strong> وحساب المتطوع يبدأ بصلاحيات محدودة</p></div>
           </div>
           <div class="hero-art" aria-label="أثر التطوع يبدأ بخطوة">
             <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
@@ -58,31 +62,31 @@
           </div>
         </section>
 
-        <section class="public-highlights" aria-label="أثر منصة الوحدة التطوعية">
-          <div><strong>24</strong><span>مبادرة مجتمعية</span></div>
-          <div><strong>1,284</strong><span>متطوع ومتطوعة</span></div>
-          <div><strong>3,640</strong><span>ساعة عطاء</span></div>
-          <div><strong>8</strong><span>فرق تصنع الأثر</span></div>
+        <section class="public-highlights" aria-label="مزايا المنصة">
+          <div><span class="highlight-icon">01</span><strong>فرص معتمدة</strong><span>تفاصيل واضحة قبل التسجيل</span></div>
+          <div><span class="highlight-icon">02</span><strong>فرق تطوعية</strong><span>مجتمع يشاركك الاهتمام</span></div>
+          <div><span class="highlight-icon">03</span><strong>متابعة منظمة</strong><span>حالة طلبك في مكان واحد</span></div>
+          <div><span class="highlight-icon">04</span><strong>توثيق للأثر</strong><span>ساعات وشهادات المشاركة</span></div>
         </section>
 
         <section class="public-opportunities" id="opportunities">
           <div class="public-section-heading">
-            <div><span class="section-kicker">فرصتك تبدأ من هنا</span><h2>مبادرات بانتظارك</h2><p>اختر المبادرة الأقرب لك، وسجّل لتكون جزءًا من أثرها.</p></div>
+            <div><span class="section-kicker">فرصتك تبدأ من هنا</span><h2>فرص تطوعية متاحة</h2><p>اطّلع على تفاصيل المبادرات المعتمدة واختر الفرصة الأقرب لاهتماماتك.</p></div>
             <button type="button" class="browse-all-button" id="browseAllButton">عرض جميع المبادرات <span>←</span></button>
           </div>
           <div class="public-initiative-grid" id="publicInitiativeGrid">
-            <article class="public-initiative-card" data-category="البيئة" data-initiative-id="seed_garden">
-              <div class="initiative-card-cover cover-green"><span class="cover-symbol">✳</span><span class="cover-tag">البيئة</span><span class="cover-number">01</span></div>
-              <div class="public-card-content"><div class="card-meta"><span>28 أكتوبر 2026</span><span class="available-status"><i></i> التسجيل مفتوح</span></div><h3>حديقة حيّنا أجمل</h3><p>ازرع البهجة في حينا، وساهم معنا في جعل المساحات الخضراء أجمل للجميع.</p><div class="card-details"><span>⌖ الرياض، حي المروج</span><span>◷ 4 ساعات</span></div><button class="initiative-join-button" type="button" data-auth="login">سجّل للمشاركة <span>←</span></button></div>
-            </article>
-            <article class="public-initiative-card" data-category="رعاية اجتماعية" data-initiative-id="seed_companions">
-              <div class="initiative-card-cover cover-blue"><span class="cover-symbol">♡</span><span class="cover-tag">رعاية اجتماعية</span><span class="cover-number">02</span></div>
-              <div class="public-card-content"><div class="card-meta"><span>30 أكتوبر 2026</span><span class="available-status"><i></i> التسجيل مفتوح</span></div><h3>رفقة كبارنا</h3><p>وقتٌ طيب ورفقة جميلة؛ شارك في إسعاد كبار السن في يوم مليء بالأنشطة.</p><div class="card-details"><span>⌖ مركز الوفاء الاجتماعي</span><span>◷ 3 ساعات</span></div><button class="initiative-join-button" type="button" data-auth="login">سجّل للمشاركة <span>←</span></button></div>
-            </article>
-            <article class="public-initiative-card" data-category="الصحة والرياضة" data-initiative-id="seed_health">
-              <div class="initiative-card-cover cover-orange"><span class="cover-symbol">✦</span><span class="cover-tag">الصحة والرياضة</span><span class="cover-number">03</span></div>
-              <div class="public-card-content"><div class="card-meta"><span>3 نوفمبر 2026</span><span class="available-status"><i></i> التسجيل مفتوح</span></div><h3>خطوة لصحة أفضل</h3><p>انشر الوعي الصحي وشارك في تنظيم فعالية حيوية في أحضان الطبيعة.</p><div class="card-details"><span>⌖ ممشى وادي حنيفة</span><span>◷ 5 ساعات</span></div><button class="initiative-join-button" type="button" data-auth="login">سجّل للمشاركة <span>←</span></button></div>
-            </article>
+            <p class="public-empty-state">ستظهر هنا الفرص التطوعية المعتمدة عند توفرها.</p>
+          </div>
+        </section>
+
+        <section class="public-how-it-works" id="how-it-works" aria-labelledby="howItWorksHeading">
+          <div class="public-section-heading">
+            <div><span class="section-kicker">خطوات واضحة</span><h2 id="howItWorksHeading">ابدأ رحلتك التطوعية بسهولة</h2><p>من اختيار الفرصة حتى توثيق مشاركتك، كل شيء في مكان واحد.</p></div>
+          </div>
+          <div class="how-it-works-grid">
+            <article class="how-it-works-card"><span class="how-step">01</span><div class="how-icon">↗</div><h3>أنشئ حسابك</h3><p>سجّل كمتطوع وعرّفنا باهتماماتك ومعلوماتك الأساسية.</p></article>
+            <article class="how-it-works-card"><span class="how-step">02</span><div class="how-icon">⌕</div><h3>اختر فرصتك</h3><p>تعرّف على المبادرات المعتمدة وقدّم طلب المشاركة المناسب لك.</p></article>
+            <article class="how-it-works-card"><span class="how-step">03</span><div class="how-icon">✳</div><h3>شارك أثرَك</h3><p>تابع حالة طلبك وساعاتك وشهاداتك من حسابك الشخصي.</p></article>
           </div>
         </section>
 
@@ -111,8 +115,8 @@
           <span class="banner-decoration">✳</span>
         </section>
       </main>
-      <p class="firebase-setup-notice" id="firebaseSetupNotice" hidden>المبادرات المعروضة مؤقتة. اربط الموقع بمشروع Firebase الخاص بالجمعية لتفعيل التسجيل وحفظ البيانات.</p>
-      <footer class="public-footer"><a class="brand footer-brand" href="#home"><img class="brand-logo" src="logo.png" alt="جمعية نبض التطوعية - Nabd Volunteering Association" /></a><span>© 2026 منصة الوحدة التطوعية</span></footer>
+      <p class="firebase-setup-notice" id="firebaseSetupNotice" hidden>الخدمات غير متاحة مؤقتًا. إعداد Firebase مطلوب لتفعيل التسجيل ومتابعة الفرص والطلبات.</p>
+      <footer class="public-footer"><a class="brand footer-brand" href="#home"><img class="brand-logo" src="logo.png" alt="جمعية نبض التطوعية - Nabd Volunteering Association" /></a><span>© 2026 منصة الوحدة التطوعية</span><a class="admin-portal-link" href="https://joker055bf.github.io/NBD-admin/">بوابة الإدارة</a></footer>
     </div>
 
     <main class="auth-screen" id="authScreen" hidden>
@@ -125,16 +129,23 @@
         <p class="auth-subtitle">سجّل دخولك لمتابعة فرصك ومشاركاتك التطوعية.</p>
         <a class="auth-home-link" id="authHomeButton" href="#home">← العودة للمبادرات</a>
         <form id="loginForm" class="auth-form">
-          <label class="field-label" for="loginEmail">البريد الإلكتروني</label>
-          <input id="loginEmail" class="dialog-input" type="email" autocomplete="email" placeholder="name@example.com" required />
+          <label class="field-label" for="loginUsername">اسم المستخدم</label>
+          <input id="loginUsername" class="dialog-input" type="text" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9._-]{3,32}" required />
           <label class="field-label" for="loginPassword">كلمة المرور</label>
           <input id="loginPassword" class="dialog-input" type="password" autocomplete="current-password" placeholder="أدخل كلمة المرور" required />
           <button class="primary-button auth-submit" type="submit">تسجيل الدخول</button>
+          <nav class="volunteer-login-help" aria-label="مساعدة تسجيل الدخول">
+            <a href="admin-recovery.html?mode=username">نسيت اسم المستخدم؟</a>
+            <a href="admin-recovery.html?mode=password">نسيت كلمة المرور؟</a>
+          </nav>
           <button class="signup-below-login" type="button" id="registerTab">تسجيل متطوع جديد</button>
         </form>
         <form id="registerForm" class="auth-form" hidden>
           <label class="field-label" for="registerName">الاسم الكامل</label>
           <input id="registerName" class="dialog-input" autocomplete="name" placeholder="اكتب اسمك الكامل" required />
+          <label class="field-label" for="registerUsername">اسم المستخدم</label>
+          <input id="registerUsername" class="dialog-input" type="text" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9._-]{3,32}" aria-describedby="registerUsernameHelp" required />
+          <small id="registerUsernameHelp">من 3 إلى 32 خانة: أحرف إنجليزية أو أرقام أو . أو _ أو -</small>
           <label class="field-label" for="registerEmail">البريد الإلكتروني</label>
           <input id="registerEmail" class="dialog-input" type="email" autocomplete="email" placeholder="name@example.com" required />
           <label class="field-label" for="registerPassword">كلمة المرور</label>
@@ -146,6 +157,52 @@
         <p class="demo-notice">حسابات المتطوعين فقط يمكن إنشاؤها من هذه الصفحة.</p>
       </section>
     </main>
+    <dialog class="action-dialog account-settings-dialog" id="volunteerSettingsDialog" aria-labelledby="volunteerSettingsTitle">
+      <div class="dialog-content">
+        <button class="dialog-close" id="closeVolunteerSettings" type="button" aria-label="إغلاق">×</button>
+        <span class="dialog-icon" aria-hidden="true">م</span>
+        <h2 id="volunteerSettingsTitle">الإعدادات الشخصية</h2>
+        <p>حدّث بيانات حسابك. تعديل البيانات الشخصية لا يغيّر صلاحيات الحساب.</p>
+        <form id="volunteerProfileForm">
+          <label class="field-label" for="volunteerProfileName">الاسم الكامل</label>
+          <input class="dialog-input" id="volunteerProfileName" maxlength="100" required />
+          <label class="field-label" for="volunteerProfileEmail">البريد الإلكتروني</label>
+          <input class="dialog-input" id="volunteerProfileEmail" type="email" readonly />
+          <label class="field-label" for="volunteerProfileGender">الجنس</label>
+          <select class="dialog-input" id="volunteerProfileGender">
+            <option value="">اختر</option>
+            <option value="male">ذكر</option>
+            <option value="female">أنثى</option>
+            <option value="prefer_not_to_say">أفضل عدم الإفصاح</option>
+          </select>
+          <label class="field-label" for="volunteerProfileNationality">الجنسية</label>
+          <input class="dialog-input" id="volunteerProfileNationality" maxlength="80" />
+          <button class="primary-button auth-submit" type="submit">حفظ البيانات الشخصية</button>
+        </form>
+        <section class="volunteer-credentials-form" aria-labelledby="volunteerCredentialsTitle">
+          <h3 id="volunteerCredentialsTitle">بيانات الدخول</h3>
+          <form id="volunteerUsernameForm">
+            <label class="field-label" for="volunteerUsername">اسم المستخدم الحالي</label>
+            <input class="dialog-input" id="volunteerUsername" type="text" readonly />
+            <label class="field-label" for="volunteerNewUsername">اسم المستخدم الجديد</label>
+            <input class="dialog-input" id="volunteerNewUsername" type="text" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9._-]{3,32}" required />
+            <label class="field-label" for="volunteerUsernamePassword">كلمة المرور الحالية</label>
+            <input class="dialog-input" id="volunteerUsernamePassword" type="password" autocomplete="current-password" required />
+            <button class="secondary-button" type="submit">تغيير اسم المستخدم</button>
+          </form>
+          <form id="volunteerPasswordForm">
+            <h4>تغيير كلمة المرور</h4>
+            <label class="field-label" for="volunteerCurrentPassword">كلمة المرور الحالية</label>
+            <input class="dialog-input" id="volunteerCurrentPassword" type="password" autocomplete="current-password" required />
+            <label class="field-label" for="volunteerNewPassword">كلمة المرور الجديدة</label>
+            <input class="dialog-input" id="volunteerNewPassword" type="password" autocomplete="new-password" minlength="6" required />
+            <button class="secondary-button" type="submit">تغيير كلمة المرور</button>
+          </form>
+          <p class="volunteer-credentials-note">تتطلب كل عملية تأكيد كلمة المرور الحالية.</p>
+        </section>
+        <button class="volunteer-settings-logout" id="volunteerSettingsLogout" type="button">تسجيل الخروج</button>
+      </div>
+    </dialog>
     <div class="app-shell" id="appShell" hidden>
       <aside class="sidebar" id="sidebar">
         <a class="brand" href="#" aria-label="منصة الوحدة التطوعية، الصفحة الرئيسية">
