@@ -12,13 +12,46 @@ const toast = document.getElementById("toast");
 let currentUser = null;
 let currentProfile = null;
 let pendingInitiative = null;
+let publicTeams = null;
+let publicInitiatives = [];
+let myParticipationRequests = [];
+let participationLoadToken = 0;
+let showAllInitiatives = false;
 let toastTimer;
+
+const monthDateFormatter = new Intl.DateTimeFormat("ar-SA-u-nu-latn", {
+  day: "numeric",
+  month: "long",
+  year: "numeric"
+});
+
+function formatDateValue(value) {
+  if (!value) return "—";
+  const date = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : monthDateFormatter.format(date);
+}
 
 function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => toast.classList.remove("show"), 3500);
+}
+
+function setFormBusy(form, isBusy, busyLabel) {
+  const button = form?.querySelector('button[type="submit"]');
+  if (!button) return;
+  if (isBusy) {
+    button.dataset.idleLabel = button.textContent;
+    button.textContent = busyLabel;
+    button.disabled = true;
+    form.setAttribute("aria-busy", "true");
+    return;
+  }
+  if (button.dataset.idleLabel) button.textContent = button.dataset.idleLabel;
+  delete button.dataset.idleLabel;
+  button.disabled = false;
+  form.removeAttribute("aria-busy");
 }
 
 function firebaseError(error) {
@@ -36,15 +69,141 @@ function firebaseError(error) {
     "firestore/permission-denied": "لا تملك صلاحية تنفيذ هذا الإجراء.",
     "functions/already-exists": "اسم المستخدم أو البريد الإلكتروني مستخدم مسبقًا.",
     "functions/unauthenticated": "اسم المستخدم أو كلمة المرور غير صحيحة.",
-    "functions/invalid-argument": "تحقق من البيانات المدخلة."
+    "functions/invalid-argument": "تحقق من البيانات المدخلة.",
+    "functions/internal": "تعذر إكمال العملية بسبب إعدادات الخادم. قد تحتاج دوال Firebase إلى نشر أو حساب الإدارة إلى تهيئة اسم مستخدم.",
+    internal: "تعذر إكمال العملية بسبب إعدادات الخادم. قد تحتاج دوال Firebase إلى نشر أو حساب الإدارة إلى تهيئة اسم مستخدم.",
+    "functions/not-found": "خدمة تسجيل الدخول غير منشورة بعد. تواصل مع إدارة المنصة لتفعيلها.",
+    "functions/failed-precondition": "لم تكتمل تهيئة الحسابات بعد. تواصل مع إدارة المنصة.",
+    "functions/deadline-exceeded": "استغرق الطلب وقتًا أطول من المتوقع. حاول مرة أخرى.",
+    "functions/unavailable": "الخدمة غير متاحة مؤقتًا. تحقق من الاتصال وحاول لاحقًا.",
+    "functions/permission-denied": "لا تملك صلاحية تنفيذ هذا الإجراء.",
+    "functions/resource-exhausted": "تعذر إكمال العملية الآن. حاول لاحقًا أو تواصل مع إدارة المنصة."
   };
-  return messages[error.code] || error.message || "حدث خطأ غير متوقع. حاول مرة أخرى.";
+  return messages[error.code] || "حدث خطأ غير متوقع. حاول مرة أخرى أو تواصل مع إدارة المنصة.";
 }
 
 function requireFirebase() {
   if (firebaseReady) return true;
   showToast("Firebase غير مضبوط. أضف إعدادات مشروعك إلى firebase-config.js أولًا.");
   return false;
+}
+
+function updateAuthUi() {
+  const signedIn = Boolean(currentUser);
+  document.querySelectorAll(".public-login-button").forEach((button) => {
+    button.textContent = signedIn ? "حسابي" : "تسجيل الدخول";
+  });
+  document.querySelectorAll(".public-auth-actions .public-register-button, .public-nav-auth .public-register-button")
+    .forEach((button) => {
+      button.hidden = signedIn;
+    });
+
+  [
+    [document.getElementById("heroPrimaryCta"), "ابدأ رحلتك التطوعية", "استكشف الفرص المتاحة"],
+    [document.getElementById("bannerPrimaryCta"), "أنشئ حساب متطوع", "تصفح الفرص المتاحة"]
+  ].forEach(([button, guestLabel, memberLabel]) => {
+    if (!button) return;
+    if (!button.dataset.guestLabel) button.dataset.guestLabel = guestLabel;
+    button.dataset.auth = signedIn ? "explore" : "register";
+    button.innerHTML = `${signedIn ? memberLabel : button.dataset.guestLabel} <span>←</span>`;
+  });
+
+  document.getElementById("memberRecords").hidden = !signedIn;
+  document.getElementById("memberGuestNote").hidden = signedIn;
+}
+
+function clearMemberRecords() {
+  ["myTeamJoinRequests", "myNotifications", "myCertificates"].forEach((id) => {
+    document.getElementById(id).replaceChildren();
+  });
+  document.getElementById("myTeamJoinRequestsEmpty").hidden = false;
+  document.getElementById("myTeamJoinRequestsEmpty").textContent = "لا توجد طلبات انضمام حتى الآن.";
+  document.getElementById("myNotificationsEmpty").hidden = false;
+  document.getElementById("myNotificationsEmpty").textContent = "لا توجد تنبيهات أو تحذيرات.";
+  document.getElementById("myCertificatesEmpty").hidden = false;
+  document.getElementById("myCertificatesEmpty").textContent = "لا توجد شهادات مسجلة.";
+}
+
+function showSignedOutState() {
+  currentUser = null;
+  currentProfile = null;
+  participationLoadToken += 1;
+  myParticipationRequests = [];
+  updateAuthUi();
+  clearMemberRecords();
+  applyInitiativeButtonStates();
+}
+
+function closePublicMenu() {
+  const nav = document.getElementById("publicNav");
+  const button = document.getElementById("publicMenuButton");
+  nav.classList.remove("is-open");
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-label", "فتح قائمة التنقل");
+}
+
+function togglePublicMenu() {
+  const nav = document.getElementById("publicNav");
+  const button = document.getElementById("publicMenuButton");
+  const opening = !nav.classList.contains("is-open");
+  nav.classList.toggle("is-open", opening);
+  button.setAttribute("aria-expanded", String(opening));
+  button.setAttribute("aria-label", opening ? "إغلاق قائمة التنقل" : "فتح قائمة التنقل");
+}
+
+document.getElementById("publicMenuButton").addEventListener("click", (event) => {
+  event.stopPropagation();
+  togglePublicMenu();
+});
+
+document.getElementById("publicNav").addEventListener("click", (event) => {
+  if (event.target.closest("a, button")) closePublicMenu();
+});
+
+document.addEventListener("click", (event) => {
+  const nav = document.getElementById("publicNav");
+  const button = document.getElementById("publicMenuButton");
+  if (!nav.classList.contains("is-open")) return;
+  if (!nav.contains(event.target) && !button.contains(event.target)) closePublicMenu();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closePublicMenu();
+});
+
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 960) closePublicMenu();
+});
+
+async function loadPublicTeams() {
+  const select = document.getElementById("teamJoinSelect");
+  if (!firebaseReady) return;
+  select.disabled = true;
+  select.replaceChildren(new Option("جارٍ تحميل الفرق...", ""));
+  try {
+    const result = await functions.httpsCallable("listPublicTeams")({});
+    publicTeams = Array.isArray(result.data.teams) ? result.data.teams : [];
+    select.replaceChildren(new Option(
+      publicTeams.length ? "اختر اسم الفريق" : "لا توجد فرق متاحة حاليًا",
+      ""
+    ));
+    publicTeams.forEach((team) => {
+      const option = new Option(team.name, team.id);
+      select.add(option);
+    });
+    select.disabled = publicTeams.length === 0;
+  } catch (error) {
+    publicTeams = null;
+    select.replaceChildren(new Option("تعذر تحميل الفرق. أعد تحميل الصفحة.", ""));
+    select.disabled = true;
+    console.error(error);
+    showToast("تعذر تحميل أسماء الفرق حاليًا. حاول تحديث الصفحة.");
+  }
+}
+
+async function loadPublicTeamNames() {
+  if (publicTeams === null) await loadPublicTeams();
+  return new Map((publicTeams || []).map((team) => [team.id, team.name]));
 }
 
 function openVolunteerSettings() {
@@ -68,19 +227,8 @@ async function signOutVolunteer() {
   if (!auth) return;
   try {
     await auth.signOut();
-    currentUser = null;
-    currentProfile = null;
-    document.querySelector(".public-login-button").textContent = "تسجيل الدخول";
-    document.getElementById("myTeamJoinRequests").replaceChildren();
-    document.getElementById("myTeamJoinRequestsEmpty").textContent = "سجّل الدخول لمتابعة طلبات انضمامك.";
-    document.getElementById("myTeamJoinRequestsEmpty").hidden = false;
-    document.getElementById("myNotifications").replaceChildren();
-    document.getElementById("myNotificationsEmpty").textContent = "سجّل الدخول لعرض تنبيهاتك.";
-    document.getElementById("myNotificationsEmpty").hidden = false;
-    document.getElementById("myCertificates").replaceChildren();
-    document.getElementById("myCertificatesEmpty").textContent = "سجّل الدخول لعرض شهاداتك.";
-    document.getElementById("myCertificatesEmpty").hidden = false;
     document.getElementById("volunteerSettingsDialog").close();
+    showSignedOutState();
     showToast("تم تسجيل الخروج.");
   } catch (error) {
     showToast(firebaseError(error));
@@ -88,9 +236,10 @@ async function signOutVolunteer() {
 }
 
 function openAuth(mode = "login", initiativeId = null) {
-  pendingInitiative = initiativeId;
+  if (initiativeId) pendingInitiative = initiativeId;
   publicSite.hidden = true;
   authScreen.hidden = false;
+  closePublicMenu();
   const registering = mode === "register";
   document.getElementById("registerForm").hidden = !registering;
   document.getElementById("loginForm").hidden = registering;
@@ -99,16 +248,30 @@ function openAuth(mode = "login", initiativeId = null) {
     ? "أنشئ حساب متطوع وابدأ رحلتك في صناعة الأثر."
     : "سجّل دخولك لمتابعة فرصك ومشاركاتك التطوعية.";
   window.scrollTo(0, 0);
+  window.setTimeout(() => {
+    const target = registering ? document.getElementById("registerName") : document.getElementById("loginUsername");
+    target?.focus({ preventScroll: true });
+  }, 60);
 }
 
-document.querySelectorAll("[data-auth]").forEach((button) => {
-  button.addEventListener("click", async () => {
-    if (currentUser && button.classList.contains("public-login-button")) {
-      openVolunteerSettings();
-      return;
-    }
-    openAuth(button.dataset.auth);
-  });
+function showPublicSite() {
+  authScreen.hidden = true;
+  publicSite.hidden = false;
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-auth]");
+  if (!button) return;
+  const action = button.dataset.auth;
+  if (action === "explore") {
+    document.getElementById("opportunities").scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  if (currentUser) {
+    openVolunteerSettings();
+    return;
+  }
+  openAuth(action);
 });
 
 document.getElementById("closeVolunteerSettings").addEventListener("click", () => {
@@ -122,29 +285,54 @@ document.getElementById("volunteerSettingsDialog").addEventListener("click", (ev
 document.getElementById("authHomeButton").addEventListener("click", (event) => {
   event.preventDefault();
   pendingInitiative = null;
-  authScreen.hidden = true;
-  publicSite.hidden = false;
+  showPublicSite();
   window.history.replaceState(null, "", window.location.pathname);
   window.scrollTo(0, 0);
+  document.querySelector(".public-login-button")?.focus({ preventScroll: true });
 });
 document.getElementById("registerTab").addEventListener("click", () => openAuth("register"));
 document.getElementById("loginTab").addEventListener("click", () => openAuth("login"));
 
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !authScreen.hidden) {
+    pendingInitiative = null;
+    showPublicSite();
+    window.scrollTo(0, 0);
+  }
+});
+
 function setSignedInHeader(user, profile) {
   currentUser = user;
-  currentProfile = profile;
-  document.querySelector(".public-login-button").textContent = "إعدادات الحساب";
+  currentProfile = profile || {};
+  updateAuthUi();
   loadMyRecords(user).catch((error) => {
     showToast(`تعذر تحميل سجلات حسابك: ${firebaseError(error)}`);
+  });
+  loadMyParticipationRequests(user).catch((error) => {
+    showToast(`تعذر تحميل طلبات مشاركتك: ${firebaseError(error)}`);
   });
 }
 
 async function loadMyRecords(user) {
-  await Promise.all([
+  const results = await Promise.allSettled([
     loadMyTeamJoinRequests(user),
     loadMyNotifications(user),
     loadMyCertificates(user)
   ]);
+  if (results.some((result) => result.status === "rejected")) {
+    throw results.find((result) => result.status === "rejected").reason;
+  }
+}
+
+async function loadMyParticipationRequests(user) {
+  if (!firebaseReady || !user) return;
+  const token = ++participationLoadToken;
+  const snapshot = await db.collection("participationRequests")
+    .where("volunteerUid", "==", user.uid)
+    .get();
+  if (token !== participationLoadToken) return;
+  myParticipationRequests = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+  applyInitiativeButtonStates();
 }
 
 async function loadMyTeamJoinRequests(user) {
@@ -157,21 +345,24 @@ async function loadMyTeamJoinRequests(user) {
   const requests = snapshot.docs.sort((a, b) =>
     (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0)
   );
+  const teamNames = await loadPublicTeamNames();
   rows.replaceChildren();
   empty.hidden = requests.length > 0;
   empty.textContent = "لا توجد طلبات انضمام حتى الآن.";
   requests.forEach((item) => {
     const request = item.data();
     const row = document.createElement("tr");
-    const teamId = document.createElement("td");
-    teamId.textContent = request.teamId;
+    const teamName = document.createElement("td");
+    teamName.textContent = request.teamName || teamNames.get(request.teamId) || "فريق";
     const status = document.createElement("td");
-    status.textContent = request.status === "pending"
-      ? "قيد المراجعة"
-      : request.status === "accepted" ? "مقبول" : "مرفوض";
+    const statusBadge = document.createElement("span");
+    const statusKey = ["pending", "accepted", "rejected"].includes(request.status) ? request.status : "pending";
+    statusBadge.className = `record-badge record-badge-${statusKey}`;
+    statusBadge.textContent = statusKey === "pending" ? "قيد المراجعة" : statusKey === "accepted" ? "مقبول" : "مرفوض";
+    status.append(statusBadge);
     const date = document.createElement("td");
-    date.textContent = request.createdAt?.toDate?.().toLocaleDateString("ar-SA") || "—";
-    row.append(teamId, status, date);
+    date.textContent = formatDateValue(request.createdAt);
+    row.append(teamName, status, date);
     rows.append(row);
   });
 }
@@ -192,14 +383,39 @@ async function loadMyNotifications(user) {
     const notification = item.data();
     const row = document.createElement("tr");
     const type = document.createElement("td");
-    type.textContent = notification.type === "warning" ? "تحذير" : "تنبيه";
+    const typeBadge = document.createElement("span");
+    typeBadge.className = `record-badge ${notification.type === "warning" ? "record-badge-warning" : "record-badge-alert"}`;
+    typeBadge.textContent = notification.type === "warning" ? "تحذير" : "تنبيه";
+    type.append(typeBadge);
     const message = document.createElement("td");
+    message.className = "record-message";
     message.textContent = notification.message;
     const date = document.createElement("td");
-    date.textContent = notification.createdAt?.toDate?.().toLocaleDateString("ar-SA") || "—";
+    date.textContent = formatDateValue(notification.createdAt);
     row.append(type, message, date);
     rows.append(row);
   });
+}
+
+async function findInitiative(initiativeId) {
+  return publicInitiatives.find((initiative) => initiative.id === initiativeId) || null;
+}
+
+async function resolveInitiativeTitle(initiativeId) {
+  const cached = findInitiative(initiativeId);
+  if (cached) return cached.title || "مبادرة تطوعية";
+  if (!firebaseReady) return "مبادرة تطوعية";
+  try {
+    const snapshot = await db.collection("initiatives").doc(initiativeId).get();
+    if (snapshot.exists) {
+      const initiative = { id: snapshot.id, ...snapshot.data() };
+      publicInitiatives.push(initiative);
+      return initiative.title || "مبادرة تطوعية";
+    }
+  } catch (error) {
+    // Volunteers cannot read archived initiatives; fall back to a neutral label.
+  }
+  return "مبادرة تطوعية";
 }
 
 async function loadMyCertificates(user) {
@@ -211,6 +427,10 @@ async function loadMyCertificates(user) {
   const certificates = snapshot.docs.sort((a, b) =>
     (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0)
   );
+  const titles = new Map(await Promise.all(certificates.map(async (item) => [
+    item.id,
+    await resolveInitiativeTitle(item.data().initiativeId)
+  ])));
   rows.replaceChildren();
   empty.hidden = certificates.length > 0;
   empty.textContent = "لا توجد شهادات مسجلة.";
@@ -218,7 +438,7 @@ async function loadMyCertificates(user) {
     const certificate = item.data();
     const row = document.createElement("tr");
     const initiative = document.createElement("td");
-    initiative.textContent = certificate.initiativeId;
+    initiative.textContent = titles.get(item.id) || "مبادرة تطوعية";
     const hours = document.createElement("td");
     hours.textContent = String(certificate.hours || 0);
     const linkCell = document.createElement("td");
@@ -246,50 +466,118 @@ document.getElementById("teamJoinForm").addEventListener("submit", async (event)
     return;
   }
   const form = event.currentTarget;
-  const button = form.querySelector("button[type=submit]");
-  const teamId = document.getElementById("teamJoinId").value.trim();
-  button.disabled = true;
+  const teamSelect = document.getElementById("teamJoinSelect");
+  const teamId = teamSelect.value;
+  const teamName = teamSelect.selectedOptions[0]?.textContent?.trim();
+  if (!teamId || !teamName) {
+    showToast("اختر اسم الفريق أولًا.");
+    return;
+  }
+  setFormBusy(form, true, "جارٍ إرسال الطلب...");
   try {
     const profile = await db.collection("volunteers").doc(currentUser.uid).get();
     if (!profile.exists || profile.data().role !== "volunteer") {
       showToast("طلب الانضمام متاح لحسابات المتطوعين فقط.");
       return;
     }
+    if (profile.data().teamId) {
+      showToast("أنت عضو في فريق بالفعل. تواصل مع إدارة المنصة لتغيير فريقك.");
+      return;
+    }
     const pending = await db.collection("teamJoinRequests")
       .where("volunteerUid", "==", currentUser.uid)
       .get();
-    if (pending.docs.some((request) => request.data().teamId === teamId && request.data().status === "pending")) {
-      showToast("لديك طلب قيد المراجعة لهذا الفريق.");
+    if (pending.docs.some((request) => request.data().status === "pending")) {
+      showToast("لديك طلب انضمام قيد المراجعة. انتظر رد قائد الفريق.");
       return;
     }
     await db.collection("teamJoinRequests").add({
       teamId,
+      teamName,
       volunteerUid: currentUser.uid,
       volunteerName: profile.data().displayName,
       status: "pending",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     form.reset();
-    showToast("تم إرسال طلب الانضمام لقائد الفريق.");
+    showToast(`تم إرسال طلب الانضمام إلى فريق «${teamName}».`);
     await loadMyRecords(currentUser);
   } catch (error) {
     showToast(firebaseError(error));
   } finally {
-    button.disabled = false;
+    setFormBusy(form, false);
   }
 });
 
 function initiativeName(id) {
-  const card = [...document.querySelectorAll("[data-initiative-id]")].find((item) => item.dataset.initiativeId === id);
-  return card?.querySelector("h3")?.textContent || id;
+  return findInitiative(id)?.title || "مبادرة تطوعية";
 }
 
-async function createParticipationRequest(user, initiativeId) {
+function participationFor(initiativeId) {
+  return myParticipationRequests
+    .filter((request) => request.initiativeId === initiativeId)
+    .sort((left, right) =>
+      (right.createdAt?.toMillis?.() || 0) - (left.createdAt?.toMillis?.() || 0)
+    )[0] || null;
+}
+
+function applyInitiativeButtonStates() {
+  document.querySelectorAll("#publicInitiativeGrid [data-initiative-id]").forEach((card) => {
+    const button = card.querySelector(".initiative-join-button");
+    if (!button || button.dataset.busy === "true") return;
+    const request = currentUser ? participationFor(card.dataset.initiativeId) : null;
+    button.classList.remove("is-pending", "is-accepted", "is-rejected");
+    button.disabled = false;
+    if (!request) {
+      button.innerHTML = "سجّل للمشاركة <span>←</span>";
+      return;
+    }
+    button.disabled = true;
+    if (request.status === "accepted") {
+      button.classList.add("is-accepted");
+      button.textContent = "أنت مشارك في هذه الفرصة";
+    } else if (request.status === "rejected") {
+      button.classList.add("is-rejected");
+      button.textContent = "لم يتم قبول طلبك السابق";
+    } else {
+      button.classList.add("is-pending");
+      button.textContent = "طلبك قيد المراجعة";
+    }
+  });
+}
+
+async function createParticipationRequest(user, initiativeId, button = null) {
   if (!requireFirebase()) return;
+  const existing = participationFor(initiativeId);
+  if (existing && existing.status !== "rejected") {
+    showToast(existing.status === "accepted"
+      ? "أنت مشارك في هذه الفرصة بالفعل."
+      : "لديك طلب قيد المراجعة لهذه الفرصة.");
+    applyInitiativeButtonStates();
+    return;
+  }
+  if (button) {
+    button.dataset.busy = "true";
+    button.disabled = true;
+    button.textContent = "جارٍ إرسال الطلب...";
+  }
   try {
-    const profileSnapshot = await db.collection("volunteers").doc(user.uid).get();
+    const [profileSnapshot, requestsSnapshot] = await Promise.all([
+      db.collection("volunteers").doc(user.uid).get(),
+      db.collection("participationRequests").where("volunteerUid", "==", user.uid).get()
+    ]);
     if (!profileSnapshot.exists) {
       showToast("حساب المتطوع غير مكتمل. تواصل مع إدارة المنصة.");
+      return;
+    }
+    participationLoadToken += 1;
+    myParticipationRequests = requestsSnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+    const duplicate = participationFor(initiativeId);
+    if (duplicate && duplicate.status !== "rejected") {
+      applyInitiativeButtonStates();
+      showToast(duplicate.status === "accepted"
+        ? "أنت مشارك في هذه الفرصة بالفعل."
+        : "لديك طلب قيد المراجعة لهذه الفرصة.");
       return;
     }
     await db.collection("participationRequests").add({
@@ -301,19 +589,29 @@ async function createParticipationRequest(user, initiativeId) {
       status: "pending",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    myParticipationRequests.push({
+      initiativeId,
+      initiativeName: initiativeName(initiativeId),
+      status: "pending",
+      createdAt: { toMillis: () => Date.now() }
+    });
+    applyInitiativeButtonStates();
     showToast("تم إرسال طلب المشاركة، وستصلك النتيجة بعد مراجعته.");
   } catch (error) {
     showToast(firebaseError(error));
+  } finally {
+    if (button) delete button.dataset.busy;
+    applyInitiativeButtonStates();
   }
 }
 
 document.getElementById("publicInitiativeGrid").addEventListener("click", async (event) => {
   const button = event.target.closest(".initiative-join-button");
-  if (!button) return;
+  if (!button || button.disabled) return;
   const initiativeId = button.closest("[data-initiative-id]")?.dataset.initiativeId;
   if (!initiativeId) return;
   if (currentUser) {
-    await createParticipationRequest(currentUser, initiativeId);
+    await createParticipationRequest(currentUser, initiativeId, button);
     return;
   }
   openAuth("login", initiativeId);
@@ -322,6 +620,7 @@ document.getElementById("publicInitiativeGrid").addEventListener("click", async 
 document.getElementById("registerForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!requireFirebase()) return;
+  const form = event.currentTarget;
   const name = document.getElementById("registerName").value.trim();
   const username = document.getElementById("registerUsername").value.trim();
   const email = document.getElementById("registerEmail").value.trim();
@@ -330,6 +629,7 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
     showToast("تحقق من الاسم واسم المستخدم. اسم المستخدم من 3 إلى 32 خانة.");
     return;
   }
+  setFormBusy(form, true, "جارٍ إنشاء حسابك...");
   try {
     const result = await functions.httpsCallable("completeVolunteerSignup")({
       displayName: name,
@@ -349,14 +649,18 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
     }
   } catch (error) {
     showToast(firebaseError(error));
+  } finally {
+    setFormBusy(form, false);
   }
 });
 
 document.getElementById("loginForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!requireFirebase()) return;
+  const form = event.currentTarget;
   const username = document.getElementById("loginUsername").value.trim();
   const password = document.getElementById("loginPassword").value;
+  setFormBusy(form, true, "جارٍ تسجيل الدخول...");
   try {
     const result = await functions.httpsCallable("usernameSignIn")({
       username,
@@ -372,10 +676,13 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
     }
     const profileData = profile.data();
     profileData.displayName = profileData.displayName || credential.user.displayName || "متطوع";
+    profileData.email = profileData.email || credential.user.email;
+    profileData.username = profileData.username || result.data.username;
     currentProfile = profileData;
     setSignedInHeader(credential.user, profileData);
     authScreen.hidden = true;
     publicSite.hidden = false;
+    document.getElementById("loginPassword").value = "";
     showToast("تم تسجيل الدخول بنجاح.");
     if (pendingInitiative) {
       const requestedInitiative = pendingInitiative;
@@ -384,6 +691,8 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
     }
   } catch (error) {
     showToast(firebaseError(error));
+  } finally {
+    setFormBusy(form, false);
   }
 });
 
@@ -480,13 +789,12 @@ document.getElementById("volunteerPasswordForm").addEventListener("submit", asyn
   }
 });
 
-function renderPublishedInitiative(initiativeSnapshot, index) {
-  const initiative = initiativeSnapshot.data();
+function renderPublishedInitiative(initiative, index) {
   const article = document.createElement("article");
   const themes = [["cover-green", "✳"], ["cover-blue", "♡"], ["cover-orange", "✦"]];
   const [theme, symbol] = themes[index % themes.length];
   article.className = "public-initiative-card";
-  article.dataset.initiativeId = initiativeSnapshot.id;
+  article.dataset.initiativeId = initiative.id;
   article.dataset.category = initiative.category || "تطوع";
   const cover = document.createElement("div");
   cover.className = `initiative-card-cover ${theme}`;
@@ -512,7 +820,11 @@ function renderPublishedInitiative(initiativeSnapshot, index) {
   location.textContent = `⌖ ${initiative.location || "يحدد لاحقًا"}`;
   const hours = document.createElement("span");
   hours.textContent = `◷ ${Number(initiative.hours) || 0} ساعات`;
-  details.append(location, hours);
+  const spots = document.createElement("span");
+  spots.textContent = initiative.requiredVolunteers
+    ? `◎ ${Number(initiative.requiredVolunteers)} متطوع`
+    : "◎ مقاعد متاحة";
+  details.append(location, hours, spots);
   const joinButton = document.createElement("button");
   joinButton.type = "button";
   joinButton.className = "initiative-join-button";
@@ -536,42 +848,79 @@ function formatInitiativeDate(value) {
     }).format(date);
 }
 
+function renderInitiativeGrid() {
+  const grid = document.getElementById("publicInitiativeGrid");
+  const browseButton = document.getElementById("browseAllButton");
+  grid.replaceChildren();
+  if (!publicInitiatives.length) {
+    const empty = document.createElement("div");
+    empty.className = "public-empty-state";
+    empty.innerHTML = '<span class="empty-state-icon" aria-hidden="true">✳</span><strong>الفرص القادمة تظهر هنا</strong><p>سيتم عرض المبادرات التطوعية المعتمدة بمجرد نشرها من فريق المنصة.</p>';
+    grid.append(empty);
+    if (browseButton) browseButton.hidden = true;
+    return;
+  }
+  const visible = showAllInitiatives ? publicInitiatives : publicInitiatives.slice(0, 3);
+  visible.forEach((initiative, index) => {
+    grid.append(renderPublishedInitiative(initiative, index));
+  });
+  if (browseButton) {
+    browseButton.hidden = publicInitiatives.length <= 3;
+    browseButton.setAttribute("aria-expanded", String(showAllInitiatives));
+    browseButton.innerHTML = showAllInitiatives
+      ? 'عرض أقل <span>↑</span>'
+      : `عرض جميع المبادرات (${publicInitiatives.length}) <span>←</span>`;
+  }
+  applyInitiativeButtonStates();
+}
+
+function renderInitiativeSkeletons() {
+  const grid = document.getElementById("publicInitiativeGrid");
+  grid.replaceChildren();
+  for (let index = 0; index < 3; index += 1) {
+    const skeleton = document.createElement("div");
+    skeleton.className = "public-initiative-card skeleton-card";
+    skeleton.setAttribute("aria-hidden", "true");
+    skeleton.innerHTML = '<div class="skeleton-block skeleton-cover"></div><div class="public-card-content"><div class="skeleton-block skeleton-line skeleton-line-short"></div><div class="skeleton-block skeleton-line"></div><div class="skeleton-block skeleton-line skeleton-line-medium"></div><div class="skeleton-block skeleton-button"></div></div>';
+    grid.append(skeleton);
+  }
+}
+
 async function loadPublishedInitiatives() {
   if (!firebaseReady) return;
+  renderInitiativeSkeletons();
   try {
     const snapshot = await db.collection("initiatives")
       .where("published", "==", true)
       .where("status", "==", "open")
       .get();
-    const grid = document.getElementById("publicInitiativeGrid");
-    grid.replaceChildren();
-    if (snapshot.empty) {
-      const empty = document.createElement("p");
-      empty.className = "public-empty-state";
-      empty.textContent = "لا توجد مبادرات منشورة حاليًا. تابعنا لمعرفة الفرص الجديدة.";
-      grid.append(empty);
-      return;
-    }
-    const initiatives = snapshot.docs.sort((left, right) =>
-      String(left.data().date || "").localeCompare(String(right.data().date || ""))
-    );
-    initiatives.forEach((initiativeSnapshot, index) => {
-      grid.append(renderPublishedInitiative(initiativeSnapshot, index));
-    });
+    publicInitiatives = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort((left, right) => String(left.date || "").localeCompare(String(right.date || "")));
+    renderInitiativeGrid();
   } catch (error) {
-    const grid = document.getElementById("publicInitiativeGrid");
-    grid.replaceChildren();
-    const failure = document.createElement("p");
-    failure.className = "public-empty-state";
-    failure.textContent = "تعذر تحميل الفرص حاليًا. حاول تحديث الصفحة بعد قليل.";
-    grid.append(failure);
-    showToast(`تعذر تحميل المبادرات من Firebase: ${firebaseError(error)}`);
+    document.getElementById("publicInitiativeGrid").innerHTML = '<div class="public-empty-state"><span class="empty-state-icon" aria-hidden="true">!</span><strong>تعذر تحميل الفرص</strong><p>حاول تحديث الصفحة بعد قليل، أو تواصل مع فريق المنصة.</p></div>';
+    document.getElementById("browseAllButton").hidden = true;
+    console.error(error);
+    showToast("تعذر تحميل الفرص حاليًا. حاول تحديث الصفحة.");
   }
 }
 
+document.getElementById("browseAllButton")?.addEventListener("click", (event) => {
+  showAllInitiatives = !showAllInitiatives;
+  renderInitiativeGrid();
+  if (!showAllInitiatives) {
+    event.currentTarget.closest(".public-section-heading")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+});
+
 if (firebaseReady) {
   auth.onAuthStateChanged(async (user) => {
-    if (!user || currentUser?.uid === user.uid) return;
+    if (!user) {
+      if (currentUser) showSignedOutState();
+      return;
+    }
+    if (currentUser?.uid === user.uid) return;
     try {
       const profile = await db.collection("volunteers").doc(user.uid).get();
       if (profile.exists) setSignedInHeader(user, profile.data());
@@ -580,6 +929,7 @@ if (firebaseReady) {
     }
   });
   loadPublishedInitiatives();
+  loadPublicTeams();
 } else {
   document.getElementById("firebaseSetupNotice").hidden = false;
 }
