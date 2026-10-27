@@ -17,6 +17,7 @@ let publicInitiatives = [];
 let myParticipationRequests = [];
 let participationLoadToken = 0;
 let showAllInitiatives = false;
+let nonVolunteerNoticeShown = false;
 let toastTimer;
 
 const monthDateFormatter = new Intl.DateTimeFormat("ar-SA-u-nu-latn", {
@@ -58,7 +59,10 @@ function firebaseError(error) {
   const messages = {
     "auth/email-already-in-use": "هذا البريد مسجل مسبقًا. جرّب تسجيل الدخول.",
     "auth/invalid-email": "تحقق من صيغة البريد الإلكتروني.",
-    "auth/invalid-credential": "اسم المستخدم أو كلمة المرور غير صحيحة.",
+    "auth/invalid-credential": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    "auth/user-not-found": "لا يوجد حساب بهذا البريد الإلكتروني.",
+    "auth/user-disabled": "هذا الحساب موقوف. تواصل مع إدارة المنصة.",
+    "auth/operation-not-allowed": "تسجيل الدخول بالبريد الإلكتروني غير مفعّل في إعدادات Firebase.",
     "auth/wrong-password": "كلمة المرور الحالية غير صحيحة.",
     "auth/requires-recent-login": "سجّل الدخول مجددًا ثم حاول تغيير بيانات الدخول.",
     "auth/credential-already-in-use": "هذا البريد مستخدم في حساب آخر.",
@@ -67,19 +71,33 @@ function firebaseError(error) {
     "auth/network-request-failed": "تعذر الاتصال. تحقق من اتصال الإنترنت.",
     "permission-denied": "لا تملك صلاحية تنفيذ هذا الإجراء.",
     "firestore/permission-denied": "لا تملك صلاحية تنفيذ هذا الإجراء.",
+    "signup/profile-denied": "تعذر حفظ بيانات الحساب. تأكد من نشر قواعد Firestore ثم حاول مجددًا.",
+    "signup/username-taken": "اسم المستخدم مستخدم مسبقًا. اختر اسمًا آخر.",
     "functions/already-exists": "اسم المستخدم أو البريد الإلكتروني مستخدم مسبقًا.",
     "functions/unauthenticated": "اسم المستخدم أو كلمة المرور غير صحيحة.",
     "functions/invalid-argument": "تحقق من البيانات المدخلة.",
-    "functions/internal": "تعذر إكمال العملية بسبب إعدادات الخادم. قد تحتاج دوال Firebase إلى نشر أو حساب الإدارة إلى تهيئة اسم مستخدم.",
-    internal: "تعذر إكمال العملية بسبب إعدادات الخادم. قد تحتاج دوال Firebase إلى نشر أو حساب الإدارة إلى تهيئة اسم مستخدم.",
-    "functions/not-found": "خدمة تسجيل الدخول غير منشورة بعد. تواصل مع إدارة المنصة لتفعيلها.",
+    "functions/internal": "تعذر إكمال العملية حاليًا. استخدم البريد الإلكتروني أو تواصل مع إدارة المنصة.",
+    internal: "تعذر إكمال العملية حاليًا. استخدم البريد الإلكتروني أو تواصل مع إدارة المنصة.",
+    "functions/not-found": "الدخول باسم المستخدم غير مفعّل حاليًا. استخدم بريدك الإلكتروني المسجل.",
     "functions/failed-precondition": "لم تكتمل تهيئة الحسابات بعد. تواصل مع إدارة المنصة.",
     "functions/deadline-exceeded": "استغرق الطلب وقتًا أطول من المتوقع. حاول مرة أخرى.",
     "functions/unavailable": "الخدمة غير متاحة مؤقتًا. تحقق من الاتصال وحاول لاحقًا.",
     "functions/permission-denied": "لا تملك صلاحية تنفيذ هذا الإجراء.",
     "functions/resource-exhausted": "تعذر إكمال العملية الآن. حاول لاحقًا أو تواصل مع إدارة المنصة."
   };
-  return messages[error.code] || "حدث خطأ غير متوقع. حاول مرة أخرى أو تواصل مع إدارة المنصة.";
+  if (messages[error?.code]) return messages[error.code];
+  if (!error?.code && typeof error?.message === "string" && /[\u0600-\u06FF]/.test(error.message)) {
+    return error.message;
+  }
+  return "حدث خطأ غير متوقع. حاول مرة أخرى أو تواصل مع إدارة المنصة.";
+}
+
+function isValidPhone(value) {
+  return /^[+\d][\d\s()-]{6,19}$/.test(value);
+}
+
+function isVolunteerProfile(profile) {
+  return !profile?.role || profile.role === "volunteer";
 }
 
 function requireFirebase() {
@@ -129,6 +147,8 @@ function showSignedOutState() {
   currentProfile = null;
   participationLoadToken += 1;
   myParticipationRequests = [];
+  document.getElementById("loginForm").reset();
+  document.getElementById("registerForm").reset();
   updateAuthUi();
   clearMemberRecords();
   applyInitiativeButtonStates();
@@ -213,6 +233,7 @@ function openVolunteerSettings() {
   }
   document.getElementById("volunteerProfileName").value = currentProfile.displayName || "";
   document.getElementById("volunteerProfileEmail").value = currentUser.email || currentProfile.email || "";
+  document.getElementById("volunteerProfilePhone").value = currentProfile.phone || "";
   document.getElementById("volunteerProfileGender").value = currentProfile.gender || "";
   document.getElementById("volunteerProfileNationality").value = currentProfile.nationality || "";
   document.getElementById("volunteerUsername").value = currentProfile.username || "";
@@ -282,13 +303,22 @@ document.getElementById("volunteerSettingsDialog").addEventListener("click", (ev
   if (event.target === event.currentTarget) event.currentTarget.close();
 });
 
-document.getElementById("authHomeButton").addEventListener("click", (event) => {
-  event.preventDefault();
+function returnToPublicHome() {
   pendingInitiative = null;
   showPublicSite();
   window.history.replaceState(null, "", window.location.pathname);
   window.scrollTo(0, 0);
+}
+
+document.getElementById("authHomeButton").addEventListener("click", (event) => {
+  event.preventDefault();
+  returnToPublicHome();
   document.querySelector(".public-login-button")?.focus({ preventScroll: true });
+});
+
+document.getElementById("authBrandHome").addEventListener("click", (event) => {
+  event.preventDefault();
+  returnToPublicHome();
 });
 document.getElementById("registerTab").addEventListener("click", () => openAuth("register"));
 document.getElementById("loginTab").addEventListener("click", () => openAuth("login"));
@@ -304,6 +334,7 @@ document.addEventListener("keydown", (event) => {
 function setSignedInHeader(user, profile) {
   currentUser = user;
   currentProfile = profile || {};
+  nonVolunteerNoticeShown = false;
   updateAuthUi();
   loadMyRecords(user).catch((error) => {
     showToast(`تعذر تحميل سجلات حسابك: ${firebaseError(error)}`);
@@ -345,7 +376,8 @@ async function loadMyTeamJoinRequests(user) {
   const requests = snapshot.docs.sort((a, b) =>
     (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0)
   );
-  const teamNames = await loadPublicTeamNames();
+  const needsTeamNames = requests.some((item) => !item.data().teamName);
+  const teamNames = needsTeamNames ? await loadPublicTeamNames() : new Map();
   rows.replaceChildren();
   empty.hidden = requests.length > 0;
   empty.textContent = "لا توجد طلبات انضمام حتى الآن.";
@@ -418,6 +450,18 @@ async function resolveInitiativeTitle(initiativeId) {
   return "مبادرة تطوعية";
 }
 
+const certificateStatuses = {
+  pending: "قيد المراجعة",
+  approved: "معتمد",
+  issued: "صادر",
+  rejected: "مرفوض"
+};
+
+function certificateStatusLabel(certificate) {
+  const status = certificate.status || "issued";
+  return certificateStatuses[status] || status;
+}
+
 async function loadMyCertificates(user) {
   const rows = document.getElementById("myCertificates");
   const empty = document.getElementById("myCertificatesEmpty");
@@ -436,23 +480,55 @@ async function loadMyCertificates(user) {
   empty.textContent = "لا توجد شهادات مسجلة.";
   certificates.forEach((item) => {
     const certificate = item.data();
+    const status = certificate.status || "issued";
     const row = document.createElement("tr");
     const initiative = document.createElement("td");
-    initiative.textContent = titles.get(item.id) || "مبادرة تطوعية";
+    initiative.className = "certificate-initiative-cell";
+    const initiativeTitle = document.createElement("span");
+    initiativeTitle.className = "record-cell-primary";
+    initiativeTitle.textContent = titles.get(item.id) || certificate.initiativeTitle || "مبادرة تطوعية";
+    initiative.append(initiativeTitle);
+    if (certificate.initiativeDate) {
+      const initiativeDate = document.createElement("span");
+      initiativeDate.className = "record-cell-secondary";
+      initiativeDate.textContent = certificate.initiativeDate;
+      initiative.append(initiativeDate);
+    }
     const hours = document.createElement("td");
     hours.textContent = String(certificate.hours || 0);
-    const linkCell = document.createElement("td");
+    const certificateCell = document.createElement("td");
+    certificateCell.className = "certificate-status-cell";
+    const badge = document.createElement("span");
+    badge.className = `record-badge record-badge-${status}`;
+    badge.textContent = certificateStatusLabel(certificate);
+    certificateCell.append(badge);
+    if (status === "issued" && certificate.certificateNumber) {
+      const pdf = document.createElement("button");
+      pdf.type = "button";
+      pdf.className = "record-pdf-button";
+      pdf.textContent = "حفظ PDF";
+      pdf.addEventListener("click", () => {
+        if (window.NabdCertificates) {
+          window.NabdCertificates.open({ ...certificate, status: "issued" });
+        }
+      });
+      certificateCell.append(pdf);
+    }
     if (typeof certificate.certificateUrl === "string" && /^https:\/\//i.test(certificate.certificateUrl)) {
       const link = document.createElement("a");
       link.href = certificate.certificateUrl;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      link.textContent = certificate.certificateNumber || "عرض الشهادة";
-      linkCell.append(link);
-    } else {
-      linkCell.textContent = certificate.certificateNumber || "—";
+      link.textContent = "عرض الشهادة";
+      certificateCell.append(link);
     }
-    row.append(initiative, hours, linkCell);
+    if (status === "issued" && certificate.certificateNumber) {
+      const number = document.createElement("span");
+      number.className = "record-cell-secondary";
+      number.textContent = certificate.certificateNumber;
+      certificateCell.append(number);
+    }
+    row.append(initiative, hours, certificateCell);
     rows.append(row);
   });
 }
@@ -532,14 +608,15 @@ function applyInitiativeButtonStates() {
       button.innerHTML = "سجّل للمشاركة <span>←</span>";
       return;
     }
-    button.disabled = true;
     if (request.status === "accepted") {
+      button.disabled = true;
       button.classList.add("is-accepted");
       button.textContent = "أنت مشارك في هذه الفرصة";
     } else if (request.status === "rejected") {
       button.classList.add("is-rejected");
-      button.textContent = "لم يتم قبول طلبك السابق";
+      button.innerHTML = "إعادة التسجيل بعد الرفض <span>←</span>";
     } else {
+      button.disabled = true;
       button.classList.add("is-pending");
       button.textContent = "طلبك قيد المراجعة";
     }
@@ -580,7 +657,7 @@ async function createParticipationRequest(user, initiativeId, button = null) {
         : "لديك طلب قيد المراجعة لهذه الفرصة.");
       return;
     }
-    await db.collection("participationRequests").add({
+    const requestPayload = {
       initiativeId,
       initiativeName: initiativeName(initiativeId),
       volunteerUid: user.uid,
@@ -588,7 +665,9 @@ async function createParticipationRequest(user, initiativeId, button = null) {
       volunteerEmail: user.email,
       status: "pending",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    };
+    if (profileSnapshot.data().phone) requestPayload.volunteerPhone = profileSnapshot.data().phone;
+    await db.collection("participationRequests").add(requestPayload);
     myParticipationRequests.push({
       initiativeId,
       initiativeName: initiativeName(initiativeId),
@@ -624,30 +703,91 @@ document.getElementById("registerForm").addEventListener("submit", async (event)
   const name = document.getElementById("registerName").value.trim();
   const username = document.getElementById("registerUsername").value.trim();
   const email = document.getElementById("registerEmail").value.trim();
+  const phone = document.getElementById("registerPhone").value.trim();
   const password = document.getElementById("registerPassword").value;
   if (name.length < 2 || name.length > 100 || !/^[A-Za-z0-9._-]{3,32}$/.test(username)) {
     showToast("تحقق من الاسم واسم المستخدم. اسم المستخدم من 3 إلى 32 خانة.");
     return;
   }
+  if (!isValidPhone(phone)) {
+    showToast("أدخل رقم جوال صحيحًا (7 إلى 20 رقمًا).");
+    return;
+  }
   setFormBusy(form, true, "جارٍ إنشاء حسابك...");
+  let credential = null;
+  let profileSaved = false;
   try {
-    const result = await functions.httpsCallable("completeVolunteerSignup")({
-      displayName: name,
-      username,
-      email,
-      password
+    credential = await auth.createUserWithEmailAndPassword(email, password);
+    await credential.user.updateProfile({ displayName: name });
+
+    const uid = credential.user.uid;
+    const createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    let usernameSaved = true;
+    let usernameAvailable = null;
+    try {
+      const mapping = await db.collection("loginUsernames").doc(username.toLowerCase()).get();
+      usernameAvailable = !mapping.exists;
+    } catch (error) {
+      if (error.code !== "permission-denied") throw error;
+    }
+    if (usernameAvailable === false) {
+      throw Object.assign(new Error("Username is already taken."), { code: "signup/username-taken" });
+    }
+
+    try {
+      const batch = db.batch();
+      batch.set(db.collection("volunteers").doc(uid), {
+        uid, displayName: name, email, phone, username, role: "volunteer", createdAt
+      });
+      batch.set(db.collection("loginUsernames").doc(username.toLowerCase()), { uid, email });
+      await batch.commit();
+    } catch (error) {
+      if (error.code !== "permission-denied") throw error;
+      // Older rules may not allow the username fields yet; keep signup working.
+      usernameSaved = false;
+      try {
+        await db.collection("volunteers").doc(uid).set({
+          uid, displayName: name, email, phone, role: "volunteer", createdAt
+        });
+      } catch (profileError) {
+        try {
+          await db.collection("volunteers").doc(uid).set({
+            uid, displayName: name, email, role: "volunteer", createdAt
+          });
+        } catch (legacyProfileError) {
+          throw Object.assign(new Error("Profile could not be saved."), { code: "signup/profile-denied" });
+        }
+      }
+    }
+
+    profileSaved = true;
+    form.reset();
+    setSignedInHeader(credential.user, {
+      uid, displayName: name, email, phone, username, role: "volunteer", createdAt: new Date()
     });
-    const credential = await auth.signInWithCustomToken(result.data.customToken);
-    setSignedInHeader(credential.user, { displayName: name, email, username: result.data.username, role: "volunteer" });
     authScreen.hidden = true;
     publicSite.hidden = false;
-    showToast("تم إنشاء حساب المتطوع بنجاح.");
+    showToast(usernameSaved
+      ? "تم إنشاء حساب المتطوع بنجاح. يمكنك الدخول لاحقًا ببريدك الإلكتروني."
+      : "تم إنشاء حسابك بنجاح. سجّل الدخول ببريدك الإلكتروني.");
     if (pendingInitiative) {
       const requestedInitiative = pendingInitiative;
       pendingInitiative = null;
       await createParticipationRequest(credential.user, requestedInitiative);
     }
   } catch (error) {
+    if (credential && !profileSaved) {
+      try {
+        await credential.user.delete();
+      } catch (cleanupError) {
+        console.error(cleanupError);
+      }
+      try {
+        await auth.signOut();
+      } catch (signOutError) {
+        console.error(signOutError);
+      }
+    }
     showToast(firebaseError(error));
   } finally {
     setFormBusy(form, false);
@@ -658,26 +798,39 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
   event.preventDefault();
   if (!requireFirebase()) return;
   const form = event.currentTarget;
-  const username = document.getElementById("loginUsername").value.trim();
+  const identifier = document.getElementById("loginUsername").value.trim();
   const password = document.getElementById("loginPassword").value;
   setFormBusy(form, true, "جارٍ تسجيل الدخول...");
   try {
-    const result = await functions.httpsCallable("usernameSignIn")({
-      username,
-      password,
-      apiKey: firebaseConfig.apiKey
-    });
-    const credential = await auth.signInWithCustomToken(result.data.customToken);
+    let credential;
+    if (identifier.includes("@")) {
+      credential = await auth.signInWithEmailAndPassword(identifier, password);
+    } else {
+      const result = await functions.httpsCallable("usernameSignIn")({
+        username: identifier,
+        password,
+        apiKey: firebaseConfig.apiKey
+      });
+      credential = await auth.signInWithCustomToken(result.data.customToken);
+    }
     const profile = await db.collection("volunteers").doc(credential.user.uid).get();
     if (!profile.exists) {
       await auth.signOut();
+      document.getElementById("loginPassword").value = "";
       showToast("هذا الحساب غير مسجل كمتطوع. تواصل مع إدارة المنصة.");
       return;
     }
+    if (!isVolunteerProfile(profile.data())) {
+      await auth.signOut();
+      document.getElementById("loginPassword").value = "";
+      showToast("هذا الحساب إداري. سجّل الدخول من بوابة الإدارة بدلًا من الموقع العام.");
+      return;
+    }
     const profileData = profile.data();
+    profileData.role = "volunteer";
     profileData.displayName = profileData.displayName || credential.user.displayName || "متطوع";
     profileData.email = profileData.email || credential.user.email;
-    profileData.username = profileData.username || result.data.username;
+    profileData.username = profileData.username || (identifier.includes("@") ? "" : identifier);
     currentProfile = profileData;
     setSignedInHeader(credential.user, profileData);
     authScreen.hidden = true;
@@ -702,10 +855,15 @@ document.getElementById("volunteerProfileForm").addEventListener("submit", async
   const form = event.currentTarget;
   const button = form.querySelector("button[type=submit]");
   const displayName = document.getElementById("volunteerProfileName").value.trim();
+  const phone = document.getElementById("volunteerProfilePhone").value.trim();
   const gender = document.getElementById("volunteerProfileGender").value;
   const nationality = document.getElementById("volunteerProfileNationality").value.trim();
   if (displayName.length < 2 || displayName.length > 100 || nationality.length > 80) {
     showToast("تحقق من الاسم والجنسية قبل الحفظ.");
+    return;
+  }
+  if (phone && !isValidPhone(phone)) {
+    showToast("أدخل رقم جوال صحيحًا (7 إلى 20 رقمًا).");
     return;
   }
 
@@ -714,10 +872,11 @@ document.getElementById("volunteerProfileForm").addEventListener("submit", async
     await db.collection("volunteers").doc(currentUser.uid).update({
       displayName,
       email: currentUser.email,
+      phone: phone || firebase.firestore.FieldValue.delete(),
       gender: gender || firebase.firestore.FieldValue.delete(),
       nationality: nationality || firebase.firestore.FieldValue.delete()
     });
-    currentProfile = { ...currentProfile, displayName, email: currentUser.email, gender, nationality };
+    currentProfile = { ...currentProfile, displayName, email: currentUser.email, phone, gender, nationality };
     try {
       await currentUser.updateProfile({ displayName });
     } catch (error) {
@@ -923,7 +1082,17 @@ if (firebaseReady) {
     if (currentUser?.uid === user.uid) return;
     try {
       const profile = await db.collection("volunteers").doc(user.uid).get();
-      if (profile.exists) setSignedInHeader(user, profile.data());
+      if (!profile.exists || !isVolunteerProfile(profile.data())) {
+        if (currentUser) showSignedOutState();
+        if (!nonVolunteerNoticeShown) {
+          nonVolunteerNoticeShown = true;
+          showToast(profile.exists
+            ? "هذا الحساب إداري. استخدم بوابة الإدارة للوصول إلى لوحة التحكم."
+            : "هذا الحساب غير مسجل كمتطوع. تواصل مع إدارة المنصة.");
+        }
+        return;
+      }
+      setSignedInHeader(user, profile.data());
     } catch (error) {
       showToast(firebaseError(error));
     }
