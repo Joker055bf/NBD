@@ -511,23 +511,6 @@
   font-weight: 400;
 }
 
-.admin-portal-link {
-  padding: 7px 12px;
-  border: 1px solid #e3ebe2;
-  border-radius: 20px;
-  color: #426350;
-  background: #f8fbf7;
-  font-size: 11px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: border-color .18s, background .18s;
-}
-
-.admin-portal-link:hover {
-  border-color: #bcd3bf;
-  background: #eff6ed;
-}
-
 /* Auth split screen */
 .auth-screen {
   padding: 30px 22px;
@@ -1149,4 +1132,105 @@
   .member-record-card .admin-table td.certificate-status-cell {
     text-align: left;
   }
+}
+
+/* ---------- Section-only navigation ---------- */
+
+.public-site main.is-section-view > section:not(.is-section-active) {
+  display: none;
+}
+
+.public-site.is-section-view:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
+
+.public-site.is-section-view > main {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.public-site main.is-section-view > section.is-section-active {
+  margin-block: auto;
+}
+
+/* Breathing room without oversized gaps */
+.public-opportunities {
+  padding-top: 60px;
+  padding-bottom: 48px;
+}
+
+.public-section-heading {
+  margin-bottom: 20px;
+}
+
+.public-initiative-grid {
+  gap: 18px;
+}
+
+/* Balance the section when only one or two opportunities are published */
+.public-opportunities:has(.public-initiative-grid > .public-initiative-card:only-child) .public-section-heading,
+.public-opportunities:has(.public-initiative-grid > .public-initiative-card:nth-child(2):last-child) .public-section-heading {
+  justify-content: center;
+  text-align: center;
+}
+
+@media (min-width: 641px) {
+  .public-opportunities:has(.public-initiative-grid > .public-initiative-card:only-child) .public-initiative-grid {
+    grid-template-columns: minmax(0, 380px);
+    justify-content: center;
+  }
+
+  .public-opportunities:has(.public-initiative-grid > .public-initiative-card:nth-child(2):last-child) .public-initiative-grid {
+    grid-template-columns: repeat(2, minmax(0, 380px));
+    justify-content: center;
+  }
+}
+
+.public-how-it-works {
+  margin-bottom: 46px;
+  padding: 30px;
+}
+
+.public-team-join {
+  margin-bottom: 46px;
+  padding: 24px;
+}
+
+.public-join-banner {
+  min-height: 168px;
+  margin-bottom: 46px;
+  padding: 30px 36px;
+}
+
+@media (max-width: 700px) {
+  .public-opportunities {
+    padding-top: 42px;
+    padding-bottom: 32px;
+  }
+
+  .public-how-it-works {
+    margin-bottom: 28px;
+    padding: 21px 15px;
+  }
+
+  .public-team-join {
+    margin-bottom: 28px;
+    padding: 18px 14px;
+  }
+
+  .public-join-banner {
+    margin-bottom: 32px;
+    padding: 23px 18px;
+  }
+}
+
+.public-nav a[aria-current="page"] {
+  color: #2f7a53;
+  font-weight: 600;
+}
+
+.public-nav a[aria-current="page"]::after {
+  width: 100%;
 }

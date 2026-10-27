@@ -195,6 +195,48 @@ window.addEventListener("resize", () => {
   if (window.innerWidth > 960) closePublicMenu();
 });
 
+const publicSectionViews = ["opportunities", "how-it-works", "teamJoinSection", "about"];
+
+function applyPublicView({ scroll = false } = {}) {
+  const hash = window.location.hash.slice(1);
+  const active = publicSectionViews.includes(hash) ? hash : "home";
+  document.getElementById("publicSite").classList.toggle("is-section-view", active !== "home");
+  document.getElementById("home").classList.toggle("is-section-view", active !== "home");
+  publicSectionViews.forEach((sectionId) => {
+    document.getElementById(sectionId)?.classList.toggle("is-section-active", sectionId === active);
+  });
+  document.querySelectorAll('.public-nav a[href^="#"], .footer-nav a[href^="#"]').forEach((link) => {
+    const target = link.getAttribute("href").slice(1);
+    if (target === active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+  if (scroll) window.scrollTo(0, 0);
+}
+
+function openPublicSection(sectionId) {
+  if (sectionId === "home") {
+    window.history.pushState(null, "", window.location.pathname);
+  } else {
+    window.history.pushState(null, "", `#${sectionId}`);
+  }
+  applyPublicView({ scroll: true });
+}
+
+document.addEventListener("click", (event) => {
+  if (document.getElementById("publicSite").hidden) return;
+  const link = event.target.closest('a[href^="#"]');
+  if (!link || !link.closest("#publicSite")) return;
+  const sectionId = link.getAttribute("href").slice(1);
+  if (sectionId !== "home" && !publicSectionViews.includes(sectionId)) return;
+  event.preventDefault();
+  openPublicSection(sectionId);
+  closePublicMenu();
+});
+
+window.addEventListener("hashchange", () => applyPublicView());
+
+applyPublicView();
+
 async function loadPublicTeams() {
   const select = document.getElementById("teamJoinSelect");
   if (!firebaseReady) return;
@@ -285,7 +327,7 @@ document.addEventListener("click", (event) => {
   if (!button) return;
   const action = button.dataset.auth;
   if (action === "explore") {
-    document.getElementById("opportunities").scrollIntoView({ behavior: "smooth", block: "start" });
+    openPublicSection("opportunities");
     return;
   }
   if (currentUser) {
@@ -307,6 +349,7 @@ function returnToPublicHome() {
   pendingInitiative = null;
   showPublicSite();
   window.history.replaceState(null, "", window.location.pathname);
+  applyPublicView();
   window.scrollTo(0, 0);
 }
 
