@@ -2,6 +2,11 @@ const firebaseConfig = window.firebaseConfig || {};
 const firebaseReady = typeof firebase !== "undefined"
   && Object.values(firebaseConfig).every((value) => typeof value === "string" && value.trim());
 const auth = firebaseReady ? firebase.auth() : null;
+if (auth && typeof auth.setPersistence === "function") {
+  try {
+    auth.setPersistence(firebase.auth.Auth?.Persistence?.LOCAL || "local").catch(() => {});
+  } catch (error) {}
+}
 const db = firebaseReady ? firebase.firestore() : null;
 const functions = firebaseReady ? firebase.app().functions("us-central1") : null;
 const publicSite = document.getElementById("publicSite");
@@ -20,16 +25,16 @@ let showAllInitiatives = false;
 let nonVolunteerNoticeShown = false;
 let toastTimer;
 
-const monthDateFormatter = new Intl.DateTimeFormat("ar-SA-u-nu-latn", {
-  day: "numeric",
-  month: "long",
-  year: "numeric"
-});
+const ARABIC_MONTH_NAMES = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+function formatArabicDate(date) {
+  return `${date.getDate()} ${ARABIC_MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+}
 
 function formatDateValue(value) {
   if (!value) return "—";
   const date = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : monthDateFormatter.format(date);
+  return Number.isNaN(date.getTime()) ? "—" : formatArabicDate(date);
 }
 
 function showToast(message) {
@@ -243,8 +248,13 @@ async function loadPublicTeams() {
   select.disabled = true;
   select.replaceChildren(new Option("جارٍ تحميل الفرق...", ""));
   try {
-    const result = await functions.httpsCallable("listPublicTeams")({});
-    publicTeams = Array.isArray(result.data.teams) ? result.data.teams : [];
+    try {
+      const result = await functions.httpsCallable("listPublicTeams")({});
+      publicTeams = Array.isArray(result.data.teams) ? result.data.teams : [];
+    } catch (functionError) {
+      const snapshot = await db.collection("teams").orderBy("name").get();
+      publicTeams = snapshot.docs.map((doc) => ({ id: doc.id, name: doc.data().name || "فريق" }));
+    }
     select.replaceChildren(new Option(
       publicTeams.length ? "اختر اسم الفريق" : "لا توجد فرق متاحة حاليًا",
       ""
@@ -732,8 +742,9 @@ document.getElementById("publicInitiativeGrid").addEventListener("click", async 
   if (!button || button.disabled) return;
   const initiativeId = button.closest("[data-initiative-id]")?.dataset.initiativeId;
   if (!initiativeId) return;
-  if (currentUser) {
-    await createParticipationRequest(currentUser, initiativeId, button);
+  const user = currentUser || auth?.currentUser || null;
+  if (user) {
+    await createParticipationRequest(user, initiativeId, button);
     return;
   }
   openAuth("login", initiativeId);
@@ -1041,13 +1052,7 @@ function formatInitiativeDate(value) {
     return value || "يحدد لاحقًا";
   }
   const date = new Date(`${value}T12:00:00`);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("ar-SA-u-nu-latn", {
-      day: "numeric",
-      month: "long",
-      year: "numeric"
-    }).format(date);
+  return Number.isNaN(date.getTime()) ? value : formatArabicDate(date);
 }
 
 function renderInitiativeGrid() {
